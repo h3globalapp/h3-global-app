@@ -132,8 +132,8 @@ this.currentKennelWallet = null; // Currently selected kennel
   preloadSounds() {
     // Define sound URLs - adjust paths to match your actual sound file locations
     const soundUrls = {
-      view_requests: '/sounds/new_chat_request.mp3',
-      new_kennel_requests: '/sounds/new_kennel_request.mp3'
+      view_requests: './sounds/new_chat_request.mp3',
+      new_kennel_requests: './sounds/new_kennel_request.mp3'
     };
     
     // Preload each sound

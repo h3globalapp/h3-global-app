@@ -95,7 +95,7 @@ export async function initWebPushNotifications(userId) {
     messaging = msg; // Set the exported variable
     
     // Register service worker
-    await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.register('./sw.js');
     await navigator.serviceWorker.ready;
 
     const permission = await Notification.requestPermission();

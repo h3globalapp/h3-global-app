@@ -49,8 +49,8 @@ const audioSystem = {
   enabled: false,
   init() {
     // Preload sounds
-    this.sounds.rego = new Audio('sounds/run_rego_received.mp3');
-    this.sounds.sponsorship = new Audio('sounds/new_sponsorship.mp3');
+    this.sounds.rego = new Audio('./sounds/run_rego_received.mp3');
+    this.sounds.sponsorship = new Audio('./sounds/new_sponsorship.mp3');
     
     // Preload
     Object.values(this.sounds).forEach(audio => {

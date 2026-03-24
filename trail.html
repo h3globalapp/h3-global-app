@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Live Trail Tracker</title>
+  <!-- CRITICAL: Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/trail.css"/>
+    <script type="module" src="js/subscription-guard.js"></script>
+
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+
+  
+  <style>
+  
+    #map {
+      height: calc(100vh - 200px);
+      width: 100%;
+      min-height: 400px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      z-index: 1000;
+      font-size: 14px;
+    }
+    dialog {
+      border: none;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    dialog menu {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      list-style: none;
+      padding: 0;
+      margin: 20px 0 0 0;
+    }
+    dialog button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    dialog button[value="set"], dialog button[value="start"], dialog button[value="end"] {
+      background: #2196F3;
+      color: white;
+    }
+    dialog button[value="cancel"] {
+      background: #ccc;
+    }
+	/* Bottom Nav Badge Styles */
+.nav-item {
+  position: relative;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #FF6D00;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.nav-badge:empty {
+  display: none;
+}
+  </style>
+
+  <!-- CRITICAL FIX: Define initMap BEFORE loading Google Maps API -->
+  <script>
+    window.initMap = function() {
+      console.log('initMap placeholder called');
+      if (window._realInitMap) {
+        window._realInitMap();
+      }
+    };
+  </script>
+  
+  <!-- Load Google Maps API -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsY_c16HNeFgfvDIuVhpICAfFX8evggYI&libraries=geometry&callback=initMap" async defer></script>
+  </script>
+  <!-- Badge Service - Add in <head> of every page -->
+<script type="module">
+  import badgeService from './js/screens/badge-service.js';
+  window.badgeService = badgeService;
+  badgeService.init();
+</script>
+</head>
+
+<body>
+<!-- ========== HEADER ========== -->
+<header class="header-card" id="headerCard">
+  <div class="header-inner">
+    <img id="imageProfile" class="profile-circle" src="icons/ic_profile_placeholder.svg" alt="Profile"/>
+    <h1 id="tvHeaderTitle">Live Trail Tracker</h1>
+   
+  </div>
+</header>
+
+<!-- ========== MAP ========== -->
+<div id="map" class="map"></div>
+
+<!-- ========== TRACKING CARD ========== -->
+<div class="tracking-card" id="trackingCard">
+  <pre id="tvTrackingStats" class="stats">Distance: 0.00 km
+Time: 0 min
+Pace: 0.00 min/km</pre>
+
+  <div class="button-row">
+  <button id="btnJoinPack" class="btn-orange">Join Pack</button>
+  <button id="btnSetTrail" class="btn-green">Set Trail</button>
+  <button id="btnStartTracking" class="btn-blue">Start Tracking</button>
+</div>
+</div>
+
+<!-- ========== BOTTOM NAV ========== -->
+<nav class="bottom-nav" id="bottomNavigationCard">
+  <a href="index.html" class="nav-item" data-screen="home">
+    <img src="icons/ic_home.png" alt=""/><span>Home</span>
+  </a>
+  <a href="runs.html" class="nav-item" data-screen="runs">
+    <img src="icons/ic_runs.png" alt=""/><span>Runs</span>
+  </a>
+  <a href="trail.html" class="nav-item active" data-screen="trails">
+    <img src="icons/ic_trails.png" alt=""/><span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item" data-screen="chat">
+    <img src="icons/ic_chat.png" alt=""/><span>Chat</span>
+  </a>
+  <a href="more.html" class="nav-item" data-screen="more">
+    <img src="icons/ic_more.png" alt=""/><span>More</span>
+  </a>
+</nav>
+
+<!-- Load trail.js as a module -->
+<script type="module" src="js/screens/trail.js"></script>
+</body>
+</html>

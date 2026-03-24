@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Verify OTP</title>
+  <!-- CRITICAL: Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/signup.css"/>
+  
+  <!-- Page-specific styles -->
+  <style>
+    .verify-scroll {
+      padding-top: 24px;
+    }
+  </style>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+</head>
+<body>
+
+<!-- Header -->
+<header class="signup-header">
+  <img src="icons/h3_logo.svg" alt="H3 Logo" class="signup-logo"/>
+  <h1>Verify Phone</h1>
+</header>
+
+<!-- Scrollable form -->
+<main class="signup-scroll verify-scroll">
+  <form class="signup-form" id="verifyForm">
+    
+    <!-- Instruction -->
+    <p class="helper-text" style="text-align:center;font-size:14px;margin-bottom:16px;">
+      Enter the OTP sent to your phone
+    </p>
+
+    <!-- OTP Input -->
+    <div class="input-group">
+      <label for="etOtp">OTP Code</label>
+      <input 
+        type="number" 
+        id="etOtp" 
+        placeholder="6-digit code"
+        maxlength="6"
+        inputmode="numeric"
+      />
+    </div>
+
+    <!-- Verify Button -->
+    <button type="button" id="btnVerify" class="signup-btn">VERIFY</button>
+
+    <!-- Resend Button -->
+    <button type="button" id="btnResend" class="signup-btn" style="background:#FF9800;margin-top:12px;">RESEND OTP</button>
+
+  </form>
+</main>
+
+<script src="js/screens/verify-otp.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "fieldOverrides": [
+    {
+      "collectionGroup": "withdrawals",
+      "fieldPath": "paystackTransferCode",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
+}

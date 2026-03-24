@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Home</title>
+  <!-- CRITICAL FIX: Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <!-- Recommended: Add 180x180 for iOS -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/home.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+          console.log('SW registered:', reg.scope);
+          // Force claim on install
+          if (reg.installing) {
+            reg.installing.addEventListener('statechange', (e) => {
+              if (e.target.state === 'activated') {
+                window.location.reload();
+              }
+            });
+          }
+        })
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+  
+  <!-- Badge Service -->
+  <script type="module">
+    import badgeService from './js/screens/badge-service.js';
+    window.badgeService = badgeService;
+    badgeService.init();
+  </script>
+  <!-- Service Worker Badge Support -->
+<script>
+  // Ensure service worker is controlling the page before sending messages
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      console.log('SW is ready and controlling:', registration.active ? 'yes' : 'no');
+      
+      // If not controlled, claim control
+      if (!navigator.serviceWorker.controller) {
+        console.log('Claiming SW control...');
+        registration.active.postMessage({ type: 'CLAIM_CONTROL' });
+      }
+    });
+    
+    // Listen for messages FROM service worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      console.log('Message from SW:', event.data);
+      if (event.data?.type === 'SET_BADGE') {
+        // Try to set badge from service worker message
+        if ('setAppBadge' in navigator) {
+          const count = event.data.count;
+          if (count > 0) {
+            navigator.setAppBadge(count).catch(() => {});
+          } else {
+            navigator.clearAppBadge().catch(() => {});
+          }
+        }
+      }
+    });
+  }
+</script>
+</head>
+<body>
+<!-- ADD THIS: Loading screen to hide auth flash -->
+<div id="app-loading" style="position:fixed; inset:0; background:white; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 0.3s;">
+  <div style="font-size:48px; margin-bottom:16px;">🏃</div>
+  <div style="font-size:18px; color:#666;">Loading...</div>
+</div>
+<!-- FIXED masthead -->
+<header class="masthead">
+  <img src="icons/h3_logo.svg" alt="HHH Logo" class="masthead__logo"/>
+  <h1 class="masthead__title">Hash House Harriers Worldwide</h1>
+  <img id="profileImg" class="profile-img" src="icons/ic_profile_placeholder.svg" alt="Profile"/>
+  <h2 id="tvWelcome" class="welcome__text">Welcome, Hasher!</h2>
+</header>
+
+<!-- Toolbar overflow -->
+<header class="app-bar">
+  <button id="overflowBtn" class="app-bar__overflow" aria-label="More options">
+    <span id="badge" class="badge hidden">0</span> ⋮
+  </button>
+</header>
+
+<!-- Overflow menu (7 items, role-based visibility) -->
+<ul id="overflowMenu" class="overflow-menu hidden">
+  <li id="liAddKennel" class="tier1-only"><a href="#" id="menuAddKennel">Add Kennel</a></li>
+  <li id="liViewRequests"><a href="#" id="menuViewRequests">View Requests</a></li>
+  <li id="liKennelAdmin"><a href="#" id="menuKennelAdmin">Kennel Admin</a></li>
+  <li id="liNewKennelReq" class="tier1-only"><a href="#" id="menuNewKennelRequests">New Kennel Requests</a></li>
+  <li id="liUsersList" class="tier1-only"><a href="#" id="menuUsersList">Users List</a></li>
+  <li id="liPayList" class="admin-only"><a href="#" id="menuPaymentList">Payment List</a></li>
+</ul>
+
+<!-- SCROLLABLE content -->
+<main class="scrollable">
+ <!-- Kennel card -->
+<section class="info-card kennel-card">
+  <p id="tvKennel"><strong>Kennel:</strong> -</p>
+  <p id="tvState"><strong>State:</strong> -</p>
+  <p id="tvCountry"><strong>Country:</strong> -</p>
+  
+  <!-- NEW: Wallet Balance -->
+  <div class="wallet-row" id="walletSection" style="display:none;">
+    <p id="tvWalletBalance"><strong>Wallet:</strong> ₦0</p>
+    <button id="btnRefreshBalance" class="refresh-btn" title="Refresh Balance">↻</button>
+  </div>
+  
+    <!-- NEW: Kennel Wallet (Tier 1/Tier 2 only) -->
+  <div class="wallet-row" id="kennelWalletSection" style="display:none;">
+    <p id="tvKennelWalletBalance"><strong>Kennel Wallet:</strong> ₦0</p>
+    <select id="selKennelWallet" style="display:none; margin-left:8px; padding:4px 8px; border-radius:4px; border:1px solid #ddd; font-size:12px;">
+      <option value="">Select Kennel</option>
+    </select>
+  </div>
+  
+  <div class="sub-row">
+    <p id="tvSubscription"><strong>Subscription:</strong> -</p>
+    <button id="btnCheckSubscription" class="text-btn">fix sub</button>
+  </div>
+</section>
+
+  <!-- Next Run card -->
+  <section class="info-card next-run-card">
+    <h2 class="next-run__title">Next Run</h2>
+    <h3 id="tvNextRunTitle" class="next-run__event">Next Run</h3>
+    <p id="tvNextRunDetails" class="next-run__details">No upcoming runs scheduled</p>
+    <p id="tvNextRunSubDetails" class="next-run__sub">Check back later for updates</p>
+  </section>
+
+  <!-- Action buttons -->
+  <section class="action-grid" id="actionGrid">
+    <button id="btnFindRun" class="action-btn">Find Run</button>
+    <button id="btnEvents" class="action-btn">Events</button>
+    <button id="btnSongs" class="action-btn">Songs</button>
+    <button id="btnAddKennel" class="action-btn admin-only">Add Kennel</button>
+    <button id="btnViewRequests" class="action-btn admin-only" style="position: relative;">View Requests</button>
+    <button id="btnNewKennelRequests" class="action-btn tier1-only" style="position: relative;">New Kennel Requests</button>
+  </section>
+</main>
+
+<!-- Bottom nav with icons -->
+<nav class="bottom-nav">
+  <a href="#" class="nav-item active" data-screen="home">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="runs">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Runs</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="trails">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="chat">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="more">
+    <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+    <span>More</span>
+  </a>
+</nav>
+
+<script src="js/screens/home.js" type="module"></script>
+<script type="module" src="js/home-wallet-check.js"></script>
+
+<!-- ADD THIS: Hide loader when page is ready -->
+<script>
+  window.addEventListener('load', () => {
+    const loader = document.getElementById('app-loading');
+    if (loader) {
+      loader.style.opacity = '0';
+      setTimeout(() => loader.remove(), 300);
+    }
+  });
+  // Fallback: hide after 3 seconds max
+  setTimeout(() => {
+    const loader = document.getElementById('app-loading');
+    if (loader) loader.remove();
+  }, 3000);
+</script>
+</body>
+</html>

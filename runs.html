@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Runs</title>
+  <!-- CRITICAL: Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/runs.css"/>
+  <!-- In <head> or at start of <body> -->
+<script type="module" src="js/subscription-guard.js"></script>
+
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+          console.log('SW registered:', reg.scope);
+          if (!navigator.serviceWorker.controller) {
+            reg.active?.postMessage({ type: 'CLAIM_CONTROL' });
+          }
+        })
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+  
+  
+  <!-- Badge Service -->
+  <script type="module">
+    import badgeService from './js/screens/badge-service.js';
+    window.badgeService = badgeService;
+    badgeService.init();
+  </script>
+  
+
+</head>
+<body>
+<!-- Header -->
+<header class="page-header">
+  <h1 id="tvHeader">Runs in [State]</h1>
+</header>
+
+<!-- Add Run Button (Visible only to Tier 1/2 Admins) -->
+<button type="button" id="btnAddRun" class="btn-add-run hidden">+ Add Run</button>
+
+<!-- Runs List -->
+<main class="runs-container" id="runsContainer">
+  <div id="runsList" class="runs-list"></div>
+  
+  <!-- Empty State -->
+  <div id="emptyState" class="empty-state hidden">
+    <p>No runs found in your state.</p>
+  </div>
+</main>
+
+<!-- Loading Spinner -->
+<div id="progressBarLoading" class="loading-spinner hidden">
+  <div class="spinner"></div>
+</div>
+
+<nav class="bottom-nav">
+  <a href="#" class="nav-item" data-screen="home">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="#" class="nav-item active" data-screen="runs">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Runs</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="trails">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="chat">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="#" class="nav-item" data-screen="more">
+    <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+    <span>More</span>
+  </a>
+</nav>
+
+<script src="js/screens/runs.js" type="module"></script>
+
+<!-- Run Details Dialog -->
+<div id="runDetailsDialog" class="hidden dialog-overlay">
+  <div class="dialog-content">
+    <div class="dialog-header">
+      <h2>Run Details</h2>
+      <button type="button" id="btnCloseDetails" class="btn-close">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <img id="detailImage" src="" alt="Run" class="detail-image"/>
+      <div id="detailInfo" class="detail-info"></div>
+      <button type="button" id="btnNavigate" class="btn-navigate">Navigate on Map</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Dialog - Exact match to event detail -->
+<div id="paymentDialog" class="hidden dialog-overlay">
+  <div id="paymentContent"></div>
+</div>
+
+<!-- Admin Call Dialog -->
+<div id="adminCallDialog" class="hidden dialog-overlay">
+  <div class="dialog-content">
+    <div class="dialog-header">
+      <h2>Call Admin for Payment Confirmation</h2>
+    </div>
+    <div class="dialog-body">
+      <div id="adminCallList"></div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" id="btnCloseAdminCall" class="btn-save">ON ON</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Dialog -->
+<div id="deleteDialog" class="hidden dialog-overlay">
+  <div class="dialog-content">
+    <div class="dialog-header">
+      <h2>Delete Run</h2>
+    </div>
+    <div class="dialog-body">
+      <p id="deleteMessage">Permanently remove this run?</p>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" id="btnCancelDelete" class="btn-secondary">Cancel</button>
+      <button type="button" id="btnConfirmDelete" class="btn-delete">Delete</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

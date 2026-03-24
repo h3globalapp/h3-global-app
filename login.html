@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Login</title>
+  <!-- CRITICAL: Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/signup.css"/>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+
+
+  <style>
+    /* Login specific styles */
+    .login-container {
+      padding: 24px;
+      padding-top: 40px;
+    }
+    
+    .login-logo {
+      width: 100px;
+      height: 100px;
+      display: block;
+      margin: 0 auto 24px;
+    }
+    
+    .login-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #000;
+      margin-bottom: 32px;
+    }
+    
+    /* Phone row - horizontal layout */
+    .phone-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .country-select {
+      width: auto;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      background: #fff;
+      height: 48px;
+      flex-shrink: 0;
+    }
+    
+    .phone-input {
+      flex: 1;
+      height: 48px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    
+    .phone-input:focus {
+      outline: none;
+      border-color: var(--clr-primary);
+    }
+    
+    /* OTP Section */
+    .otp-section {
+      margin-top: 16px;
+    }
+    
+    .otp-section.hidden {
+      display: none;
+    }
+    
+    /* Resend link */
+    .resend-link {
+      text-align: center;
+      margin-top: 16px;
+      color: var(--clr-primary);
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+    }
+    
+    .resend-link.visible {
+      display: block;
+    }
+    
+    /* Sign up link */
+    .signup-link {
+      text-align: center;
+      margin-top: 24px;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .signup-link a {
+      color: var(--clr-primary);
+      font-weight: 600;
+    }
+	
+	
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  
+  <!-- Logo -->
+  <img src="icons/h3_logo.svg" alt="H3 Logo" class="login-logo"/>
+  
+  <!-- Title -->
+  <h1 class="login-title">Login via OTP</h1>
+
+  <!-- Phone Input with Country Code - HORIZONTAL -->
+  <div class="phone-row">
+    <select id="countryCode" class="country-select">
+      <option value="+234">🇳🇬 +234</option>
+      <option value="+1">🇺🇸 +1</option>
+      <option value="+44">🇬🇧 +44</option>
+      <option value="+27">🇿🇦 +27</option>
+      <option value="+91">🇮🇳 +91</option>
+      <option value="+254">🇰🇪 +254</option>
+      <option value="+233">🇬🇭 +233</option>
+      <option value="+255">🇹🇿 +255</option>
+    </select>
+    <input 
+      type="tel" 
+      id="etPhone" 
+      class="phone-input" 
+      placeholder="Phone Number"
+      maxlength="15"
+    />
+  </div>
+
+  <!-- Send OTP Button -->
+  <button type="button" id="btnSendOTP" class="signup-btn" disabled>Send OTP</button>
+
+  <!-- OTP Section (hidden initially) -->
+  <div id="otpSection" class="otp-section hidden">
+    
+    <!-- OTP Input -->
+    <div class="input-group">
+      <label for="etOTP">Enter OTP</label>
+      <input 
+        type="number" 
+        id="etOTP" 
+        placeholder="6-digit code"
+        maxlength="6"
+        inputmode="numeric"
+      />
+    </div>
+
+    <!-- Verify Button -->
+    <button type="button" id="btnVerify" class="signup-btn">Verify OTP</button>
+    
+    <!-- Resend OTP Link -->
+    <p id="btnResend" class="resend-link">Resend OTP</p>
+    
+  </div>
+
+  <!-- Sign Up Redirect -->
+  <p class="signup-link">
+    Need an account? <a href="signup.html">Sign up</a>
+  </p>
+
+</div>
+
+<!-- reCAPTCHA container (invisible) -->
+<div id="recaptcha-container"></div>
+
+<script src="js/screens/login.js" type="module"></script>
+</body>
+</html>

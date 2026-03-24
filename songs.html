@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hash Songs</title>
+  <!-- CRITICAL: Removed maximum-scale and user-scalable (breaks iOS standalone) -->
+  <!-- Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/songs.css"/>
+      <script type="module" src="js/subscription-guard.js"></script>
+
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+
+
+  <!-- Base styles from your existing CSS -->
+  <link rel="stylesheet" href="css/base.css"/>
+
+  <style>
+    /* Root variables matching your theme */
+    :root{
+      --clr-primary:#FF6D00;
+      --clr-secondary:#00C853;
+      --radius:12px;
+      --bg:#ffffff;
+      --card:#2196F3;
+      --text:#000000;
+      --grey:#555555;
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box;}
+
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      height:100vh;
+      overflow:hidden;
+    }
+
+    /* FIXED masthead - matching chat page */
+    .masthead{
+      position:fixed;top:0;left:0;right:0;z-index:15;
+      display:flex;flex-direction:column;align-items:center;
+      background:#fff;
+      padding:12px 16px 8px;
+      box-shadow:0 2px 4px rgba(0,0,0,.08);
+      height:auto;
+      min-height:120px;
+    }
+
+    .masthead__title{
+      font-size:18px;font-weight:600;text-align:center;margin:8px 0 4px;
+    }
+
+    /* Header content matching chat page style */
+    .songs-header-content{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:100%;
+      max-width:600px;
+      margin-top:8px;
+    }
+
+    /* Add button styling */
+    #addBtn{
+      background:var(--clr-primary);
+      color:#fff;
+      border:0;
+      padding:8px 16px;
+      border-radius:20px;
+      font-weight:600;
+      font-size:14px;
+      cursor:pointer;
+      box-shadow:0 2px 4px rgba(0,0,0,.2);
+    }
+    #addBtn:active{opacity:.8}
+
+    /* Search bar - matching chat page */
+    .search-bar{
+      padding:8px 16px;
+      background:#fff;
+      border-bottom:1px solid #e0e0e0;
+      position:fixed;
+      top:140px;
+      left:0;right:0;
+      z-index:10;
+    }
+
+    .search-bar input{
+      width:100%;
+      padding:10px 16px;
+      border:none;
+      border-radius:20px;
+      background:#f5f5f5;
+      font-size:15px;
+      outline:none;
+    }
+
+    /* SCROLLABLE content area - matching chat page */
+    .scrollable{
+      margin-top:200px; /* masthead + search bar height */
+      padding-bottom:140px; /* room for bottom nav */
+      overflow-y:auto;
+      height:calc(100vh - 200px - 56px);
+      background:var(--bg);
+    }
+
+    /* Song cards - styled like conversation items */
+    .songs-list{
+      padding:8px 16px;
+    }
+
+    .song{
+      display:flex;
+      align-items:center;
+      background:var(--card);
+      margin:8px 0;
+      padding:14px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow:0 2px 6px rgba(0,0,0,.15);
+      color:#fff;
+      word-break:break-word;
+      white-space:normal;
+      transition:transform 0.2s, box-shadow 0.2s;
+    }
+    .song:hover{
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,.2);
+    }
+    .song:active{opacity:.9}
+
+    .song div{flex:1;min-width:0;}
+    .song .title{font-weight:600;font-size:16px;margin-bottom:4px;}
+    .song .sub{font-size:14px;opacity:0.9;}
+
+    /* Empty state */
+    .empty-state{
+      text-align:center;
+      padding:48px 16px;
+      color:var(--grey);
+    }
+    .empty-state-icon{font-size:64px;margin-bottom:16px;}
+
+    /* Loading spinner */
+    .loading-spinner{
+      text-align:center;
+      padding:40px;
+    }
+    .spinner{
+      width:48px;height:48px;
+      border:4px solid #f3f3f3;
+      border-top:4px solid var(--clr-primary);
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+      margin:0 auto;
+    }
+    @keyframes spin{
+      0%{transform:rotate(0deg);}
+      100%{transform:rotate(360deg);}
+    }
+
+    /* Bottom nav - EXACT match to chat page */
+    .bottom-nav{
+      display:flex;
+      position:fixed;
+      bottom:0;
+      left:0;right:0;
+      background:#fff;
+      border-top:1px solid #e0e0e0;
+      height:56px;
+      z-index:10;
+    }
+    .nav-item{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding-top:4px;
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .nav-icon{
+      width:24px;
+      height:24px;
+      filter:brightness(0);
+      transition:filter 0.2s;
+    }
+    .nav-item span{
+      font-size:12px;
+      margin-top:2px;
+      color:#000;
+      transition:color 0.2s;
+    }
+    .nav-item.active .nav-icon{
+      filter:brightness(0) saturate(100%) invert(48%) sepia(95%) saturate(3289%) hue-rotate(5deg) brightness(102%) contrast(101%);
+    }
+    .nav-item.active span{
+      color:var(--clr-primary);
+      font-weight:bold;
+    }
+
+    /* Add Song Dialog */
+    .dialog-overlay{
+      position:fixed;
+      top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.5);
+      z-index:1000;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .dialog-overlay.show{display:flex;}
+
+    .dialog-content{
+      background:#1c1c1e;
+      padding:20px;
+      border-radius:12px;
+      width:100%;
+      max-width:360px;
+      max-height:90vh;
+      overflow-y:auto;
+    }
+    .dialog-content h3{
+      margin-top:0;
+      color:#fff;
+      font-size:18px;
+      margin-bottom:16px;
+    }
+    .dialog-content input,
+    .dialog-content textarea{
+      width:100%;
+      margin:6px 0;
+      padding:12px;
+      border-radius:8px;
+      border:0;
+      background:#2c2c2e;
+      color:#fff;
+      font-size:15px;
+      font-family:inherit;
+    }
+    .dialog-content textarea{
+      resize:none;
+      min-height:100px;
+    }
+    .dialog-buttons{
+      display:flex;
+      gap:8px;
+      margin-top:16px;
+    }
+    .dialog-buttons button{
+      flex:1;
+      padding:12px;
+      border:0;
+      border-radius:8px;
+      font-size:15px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .btn-cancel{
+      background:#3a3a3c;
+      color:#fff;
+    }
+    .btn-save{
+      background:var(--clr-primary);
+      color:#fff;
+    }
+
+    .hidden{display:none !important;}
+	
+	/* Bottom Nav Badge Styles */
+.nav-item {
+  position: relative;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #FF6D00;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.nav-badge:empty {
+  display: none;
+}
+  </style>
+<base target="_blank">
+</script>
+  <!-- Badge Service - Add in <head> of every page -->
+<script type="module">
+  import badgeService from './js/screens/badge-service.js';
+  window.badgeService = badgeService;
+  badgeService.init();
+</script>
+</head>
+<body>
+
+<!-- FIXED masthead matching chat page -->
+<header class="masthead" style="height:140px;">
+  <h1 class="masthead__title">Hash Songs</h1>
+  <div class="songs-header-content">
+    <span style="color:#666;font-size:14px;">Song Library</span>
+    <button id="addBtn">+ Add Song</button>
+  </div>
+</header>
+
+<!-- Search bar matching chat page -->
+<div class="search-bar">
+  <input id="search" type="search" placeholder="Search songs..." autocomplete="off">
+</div>
+
+<!-- SCROLLABLE content area -->
+<main class="scrollable">
+  <div id="list" class="songs-list">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p style="color:#666;margin-top:16px;">Loading songs...</p>
+    </div>
+  </div>
+</main>
+
+<!-- FIXED bottom nav - EXACT match to chat page structure -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item" data-screen="home">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="runs.html" class="nav-item" data-screen="runs">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Runs</span>
+  </a>
+  <a href="trail.html" class="nav-item" data-screen="trails">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item" data-screen="chat">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="hash-songs.html" class="nav-item active" data-screen="songs">
+    <img src="icons/ic_music.png" alt="" class="nav-icon"/>
+    <span>Songs</span>
+  </a>
+</nav>
+
+<!-- Add Song Dialog -->
+<div id="addDlg" class="dialog-overlay">
+  <div class="dialog-content">
+    <h3>Add New Song</h3>
+    <input id="title" placeholder="Title" required>
+    <input id="subtitle" placeholder="Subtitle (optional)">
+    <input id="category" placeholder="Category">
+    <input id="audioUrl" placeholder="Audio URL (https://...)">
+    <textarea id="lyrics" placeholder="Lyrics" rows="5"></textarea>
+    <div class="dialog-buttons">
+      <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
+      <button class="btn-save" onclick="saveSong()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ==========  CONFIG  ========== */
+const COLLECTION = 'songs';
+const PLAYER_URL = 'song-player.html';
+/* =============================== */
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+/* ---- your Firebase config ---- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDk_ILQ9EPJ76NpzOnA5q6fCpPJUYX4dh8",
+  authDomain: "h3-global-app.firebaseapp.com",
+  projectId: "h3-global-app",
+  storageBucket: "h3-global-app.appspot.com",
+  messagingSenderId: "123",
+  appId: "1:123:web:abc"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ---- elements ---- */
+const listEl = document.getElementById('list');
+const searchEl = document.getElementById('search');
+const addBtn = document.getElementById('addBtn');
+const addDlg = document.getElementById('addDlg');
+const titleIn = document.getElementById('title');
+const subtitleIn = document.getElementById('subtitle');
+const categoryIn = document.getElementById('category');
+const lyricsIn = document.getElementById('lyrics');
+const audioUrlIn = document.getElementById('audioUrl');
+
+let songs = [];
+let filtered = [];
+
+/* ---- firestore listener ---- */
+const q = query(collection(db, COLLECTION), orderBy('title'));
+onSnapshot(q, snap => {
+  songs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
+});
+
+/* ---- search ---- */
+searchEl.addEventListener('input', () => {
+  const v = searchEl.value.trim().toLowerCase();
+  filtered = v ? songs.filter(s =>
+    s.title.toLowerCase().includes(v) ||
+    (s.subtitle || '').toLowerCase().includes(v) ||
+    (s.category || '').toLowerCase().includes(v)
+  ) : songs;
+  render();
+});
+
+/* ---- render list ---- */
+function render() {
+  const arr = filtered.length ? filtered : songs;
+  if (!arr.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎵</div><p>No songs found</p></div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  arr.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'song';
+    div.innerHTML = `
+      <div>
+        <div class="title">${esc(s.title)}</div>
+        <div class="sub">${esc(s.subtitle || '')} • ${esc(s.category || '')}</div>
+      </div>`;
+    div.onclick = () => openPlayer(s);
+    listEl.appendChild(div);
+  });
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+}
+
+/* ---- open player ---- */
+function openPlayer(song) {
+  const q = `id=${encodeURIComponent(song.id)}&title=${encodeURIComponent(song.title || '')}&audio=${encodeURIComponent(song.audioUrl || '')}&lrc=${encodeURIComponent(song.lyrics || '')}`;
+  location.href = `${PLAYER_URL}#${q}`;
+}
+
+/* ---- dialog functions ---- */
+window.closeDialog = function() {
+  addDlg.classList.remove('show');
+};
+
+window.saveSong = async function() {
+  const data = {
+    title: titleIn.value.trim(),
+    subtitle: subtitleIn.value.trim(),
+    category: categoryIn.value.trim(),
+    lyrics: lyricsIn.value.trim(),
+    audioUrl: audioUrlIn.value.trim(),
+    createdAt: serverTimestamp()
+  };
+  if (!data.title) return alert('Title required');
+  await addDoc(collection(db, COLLECTION), data);
+  closeDialog();
+  // Clear inputs
+  titleIn.value = subtitleIn.value = categoryIn.value = lyricsIn.value = audioUrlIn.value = '';
+};
+
+addBtn.onclick = () => {
+  titleIn.value = subtitleIn.value = categoryIn.value = lyricsIn.value = audioUrlIn.value = '';
+  addDlg.classList.add('show');
+};
+
+// Close dialog on overlay click
+addDlg.addEventListener('click', (e) => {
+  if (e.target === addDlg) closeDialog();
+});
+
+/* ---- Capacitor back-button ---- */
+document.addEventListener('backbutton', () => {
+  if (addDlg.classList.contains('show')) closeDialog();
+  else if (document.referrer.includes('song-player')) history.back();
+});
+</script>
+</body>
+</html>

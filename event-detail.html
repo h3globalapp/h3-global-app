@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Event Detail</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/event-detail.css"/>
+    <script type="module" src="js/subscription-guard.js"></script>
+
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
+      authDomain: "h3-global-app.firebaseapp.com",
+      projectId: "h3-global-app",
+      storageBucket: "h3-global-app.firebasestorage.app",
+      messagingSenderId: "174897234240",
+      appId: "1:174897234240:web:74612994c432f410843aa5"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    window.auth = getAuth(app);
+    window.storage = getStorage(app);
+  </script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+
+  <script src="js/screens/event-detail.js" type="module"></script>
+</head>
+
+<body>
+<!-- Back Button -->
+<button id="btnBack" class="back-button" aria-label="Back to events">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span>Back</span>
+</button>
+<!-- scrollable wrapper -->
+<div class="scroll-view">
+
+  <!-- Wallet Balance Display -->
+  <div id="walletBalanceDisplay" class="wallet-balance">Wallet: Loading...</div>
+
+  <!-- Event Image -->
+  <img id="ivEventImage" class="event-image" src="icons/placeholder_image.png" alt="Event image"/>
+
+  <!-- Kennel / State / Country -->
+  <p id="tvEventKennel" class="kennel">🏠 Kennel</p>
+
+  <!-- Title -->
+  <h1 id="tvEventTitle" class="title">🏷️ Event Title</h1>
+  
+ <div class="detail-row">
+  <span class="label">📋 Event Details:</span>
+  <span id="tvEventDetails" class="value content">📋 No details provided</span>
+</div>
+
+  <!-- Date & Time heading -->
+  <p class="section-heading">📅 Event Date</p>
+
+  <!-- Start & End Date row -->
+  <div class="date-row">
+    <div class="date-block">
+      <p class="label">Start Date</p>
+      <p id="tvStartDate" class="value"></p>
+    </div>
+    <p class="dash">-</p>
+    <div class="date-block">
+      <p class="label">End Date</p>
+      <p id="tvEndDate" class="value"></p>
+    </div>
+  </div>
+
+  <!-- Rego Fee -->
+  <p class="section-heading">💰 Registration Fee</p>
+  <p id="tvEventRegoFee" class="content"></p>
+
+  <!-- Venue -->
+  <p class="section-heading">📍 Venue</p>
+  <p id="tvEventAddress" class="content"></p>
+
+  <!-- Sponsorship -->
+  <p class="section-heading">🤝 For Sponsorship</p>
+  <p id="tvSponsorship" class="content">N/A</p>
+
+  <!-- Accommodation -->
+  <p class="section-heading">🛏️ Accommodation</p>
+  <div id="containerAccommodation" class="accommodation-list"></div>
+
+  <!-- What to Expect -->
+  <p class="section-heading">👀 What to Expect</p>
+  <p id="tvWhatToExpect" class="content">N/A</p>
+
+  <!-- Signed By -->
+  <p class="section-heading">✍️ Signed By</p>
+  <p id="tvSignedBy" class="content"></p>
+
+  <!-- Action row -->
+  <div class="action-row">
+    <button id="btnJoinEvent" class="btn-primary">Join Event</button>
+    <button id="btnNavigateMap" class="btn-outline">Navigate on Map</button>
+  </div>
+
+  <button id="btnShareEvent" class="btn-outline full">Share Event</button>
+
+</div>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item" data-screen="home">
+    <img src="icons/ic_home.png" alt=""/><span>Home</span>
+  </a>
+  <a href="events.html" class="nav-item" data-screen="events">
+    <img src="icons/ic_runs.png" alt=""/><span>Events</span>
+  </a>
+  <a href="trails.html" class="nav-item" data-screen="trails">
+    <img src="icons/ic_trails.png" alt=""/><span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item" data-screen="chat">
+    <img src="icons/ic_chat.png" alt=""/><span>Chat</span>
+  </a>
+  <a href="more.html" class="nav-item" data-screen="more">
+    <img src="icons/ic_more.png" alt=""/><span>More</span>
+  </a>
+</nav>
+</body>
+</html>

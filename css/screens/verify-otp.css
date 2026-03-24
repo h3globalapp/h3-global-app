@@ -1,0 +1,117 @@
+/* Verify OTP Screen Styles */
+
+.verify-otp-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  padding-top: 80px; /* Space for masthead */
+  min-height: 100vh;
+}
+
+.logo-container {
+  margin-bottom: 24px;
+}
+
+.verify-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.instruction-text {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.input-wrapper {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 16px;
+}
+
+.otp-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  font-size: 18px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+  letter-spacing: 8px;
+}
+
+.otp-input:focus {
+  border-color: var(--clr-secondary);
+}
+
+/* Remove number spinner arrows */
+.otp-input::-webkit-outer-spin-button,
+.otp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.btn {
+  width: 100%;
+  max-width: 400px;
+  height: 48px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-verify {
+  background-color: #4CAF50; /* Green */
+  margin-bottom: 12px;
+}
+
+.btn-verify:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.btn-resend {
+  background-color: #FF9800; /* Orange */
+}
+
+.btn-resend:hover:not(:disabled) {
+  background-color: #e68900;
+}
+
+/* Toast notification (simple) */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  z-index: 1000;
+  animation: fadeInOut 3s ease;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}

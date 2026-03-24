@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Sign Up</title>
+  <!-- CRITICAL: Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/signup.css"/>
+  
+  <!-- Service Worker Registration (BEFORE Firebase) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
+      authDomain: "h3-global-app.firebaseapp.com",
+      projectId: "h3-global-app",
+      storageBucket: "h3-global-app.firebasestorage.app",
+      messagingSenderId: "174897234240",
+      appId: "1:174897234240:web:74612994c432f410843aa5"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    console.log("Firebase initialized!");
+  </script>
+</head>
+<body>
+<!-- Header -->
+<header class="signup-header">
+  <img src="icons/h3_logo.svg" alt="HHH Logo" class="signup-logo"/>
+  <h1>Sign Up</h1>
+</header>
+
+<!-- Scrollable form -->
+<main class="signup-scroll">
+  <form id="signupForm" class="signup-form">
+    <!-- Hash Handle -->
+    <div class="input-group">
+      <label for="etHashHandle">Hash Handle</label>
+      <input type="text" id="etHashHandle" placeholder="Hash Handle" required/>
+    </div>
+
+    <!-- First Name -->
+    <div class="input-group">
+      <label for="etFirstName">First Name (Given Name)</label>
+      <input type="text" id="etFirstName" placeholder="First Name" required/>
+    </div>
+
+    <!-- Last Name -->
+    <div class="input-group">
+      <label for="etLastName">Last Name (Surname)</label>
+      <input type="text" id="etLastName" placeholder="Last Name" required/>
+    </div>
+
+    <!-- Phone with country code -->
+    <div class="phone-row">
+      <select id="countryCodePicker" class="country-select">
+        <option value="+234" data-flag="ng" selected>🇳🇬 +234</option>
+        <option value="+1" data-flag="us">🇺🇸 +1</option>
+        <option value="+44" data-flag="gb">🇬🇧 +44</option>
+        <option value="+61" data-flag="au">🇦🇺 +61</option>
+        <option value="+66" data-flag="th">🇹🇭 +66</option>
+      </select>
+      <div class="input-group phone-input">
+        <label for="etPhone">Phone</label>
+        <input type="tel" id="etPhone" placeholder="e.g. 8012345678" required/>
+      </div>
+    </div>
+
+    <!-- Helper text -->
+    <p class="helper-text">Please select Country, State, Kennel and Designation from the drop down list only, Do not type them</p>
+
+   <!-- Country -->
+<div class="input-group">
+  <label for="actvCountry">Select Kennel's Country</label>
+  <select id="actvCountry" required>
+    <option value="" disabled selected>Select Country</option>
+  </select>
+</div>
+
+<!-- State -->
+<div class="input-group">
+  <label for="actvState">Select Kennel's State</label>
+  <select id="actvState" required disabled>
+    <option value="" disabled selected>Select State</option>
+  </select>
+</div>
+
+<!-- Helper text for kennel -->
+<p class="helper-text">Can't find your kennel? Select (+ Add Kennel) to add a new one.</p>
+
+<!-- Kennel -->
+<div class="input-group">
+  <label for="actvKennel">Select Kennel</label>
+  <select id="actvKennel" required disabled>
+    <option value="" disabled selected>Select Kennel</option>
+  </select>
+</div>
+
+<!-- Designation -->
+<div class="input-group">
+  <label for="actvDesignation">Designation</label>
+  <select id="actvDesignation" required disabled>
+    <option value="" disabled selected>Select Designation</option>
+  </select>
+</div>
+
+    <!-- Submit -->
+    <button type="submit" id="btnSignup" class="signup-btn">CREATE ACCOUNT</button>
+  </form>
+</main>
+
+<!-- Add Kennel Modal (hidden) -->
+<div id="addKennelModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Add New Kennel</h3>
+    <div class="input-group">
+      <label for="etPrefix">Kennel Name Prefix</label>
+      <input type="text" id="etPrefix" placeholder="e.g. Bangkok"/>
+    </div>
+    <div class="radio-group">
+      <label><input type="radio" name="suffix" value="Hash House Harriers" checked/> Hash House Harriers</label>
+      <label><input type="radio" name="suffix" value="Hash House Harriet"/> Hash House Harriet</label>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="btnCancelKennel" class="btn-secondary">Cancel</button>
+      <button type="button" id="btnSubmitKennel" class="btn-primary">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/screens/signup.js" type="module"></script>
+</body>
+</html>

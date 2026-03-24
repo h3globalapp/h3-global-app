@@ -1,0 +1,26 @@
+{
+  "name": "H3 Global App",
+  "short_name": "H3 Global App",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF6D00",
+  "orientation": "portrait",
+  "scope": "/",
+  "description": "Global Hash House Harriers Chat Platform",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

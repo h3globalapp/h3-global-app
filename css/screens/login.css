@@ -1,0 +1,160 @@
+// Login Screen Logic
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+  getAuth, 
+  signInWithCredential, 
+  PhoneAuthProvider,
+  signInWithPhoneNumber,
+  RecaptchaVerifier 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getFirestore, 
+  collection, 
+  query, 
+  where, 
+  getDocs 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getFunctions, 
+  httpsCallable 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-app.firebaseapp.com",
+  projectId: "your-project",
+  storageBucket: "your-app.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const functions = getFunctions(app);
+
+// UI Elements
+const countryCode = document.getElementById('countryCode');
+const etPhone = document.getElementById('etPhone');
+const btnSendOTP = document.getElementById('btnSendOTP');
+const btnVerify = document.getElementById('btnVerify');
+const etOTP = document.getElementById('etOTP');
+const otpSection = document.getElementById('otpSection');
+const btnResend = document.getElementById('btnResend');
+
+// State
+let phoneNumber = '';
+let confirmationResult = null;
+let recaptchaVerifier = null;
+
+// Event Listeners
+etPhone.addEventListener('input', validatePhone);
+btnSendOTP.addEventListener('click', sendOTP);
+btnVerify.addEventListener('click', verifyOTP);
+btnResend.addEventListener('click', resendOTP);
+
+etOTP.addEventListener('input', (e) => {
+  if (e.target.value.length > 6) {
+    e.target.value = e.target.value.slice(0, 6);
+  }
+  btnVerify.disabled = e.target.value.length !== 6;
+});
+
+function validatePhone() {
+  const phone = etPhone.value.trim();
+  const isValid = phone.length >= 10 && /^\d+$/.test(phone);
+  btnSendOTP.disabled = !isValid;
+}
+
+async function sendOTP() {
+  const code = countryCode.value;
+  const phone = etPhone.value.trim();
+  phoneNumber = code + phone;
+
+  btnSendOTP.disabled = true;
+  showToast('Sending OTP...');
+
+  try {
+    // Check if user exists
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('phone', '==', phoneNumber));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      showToast('No account found. Redirecting to signup...');
+      setTimeout(() => {
+        window.location.href = 'signup.html';
+      }, 1500);
+      return;
+    }
+
+    // Create reCAPTCHA verifier
+    if (!recaptchaVerifier) {
+      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible'
+      });
+    }
+
+    // Send Firebase OTP
+    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+    
+    // Show OTP section
+    otpSection.classList.remove('hidden');
+    btnResend.classList.add('visible');
+    etOTP.focus();
+    
+    btnSendOTP.textContent = 'Resend OTP';
+    showToast('OTP sent');
+    
+  } catch (error) {
+    showToast('Error: ' + error.message);
+    btnSendOTP.disabled = false;
+  }
+}
+
+async function verifyOTP() {
+  const otp = etOTP.value.trim();
+  
+  if (otp.length !== 6) {
+    showToast('Enter 6-digit OTP');
+    return;
+  }
+
+  if (!confirmationResult) {
+    showToast('Request OTP first');
+    return;
+  }
+
+  try {
+    await confirmationResult.confirm(otp);
+    showToast('Login successful!');
+    window.location.href = 'index.html';
+  } catch (error) {
+    showToast('Invalid OTP: ' + error.message);
+  }
+}
+
+async function resendOTP() {
+  if (!recaptchaVerifier) return;
+  
+  try {
+    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+    showToast('OTP resent');
+  } catch (error) {
+    showToast('Failed to resend: ' + error.message);
+  }
+}
+
+function showToast(message) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.remove(), 3000);
+}

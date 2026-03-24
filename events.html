@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Events</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/events.css"/>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
+      authDomain: "h3-global-app.firebaseapp.com",
+      projectId: "h3-global-app",
+      storageBucket: "h3-global-app.firebasestorage.app",
+      messagingSenderId: "174897234240",
+      appId: "1:174897234240:web:74612994c432f410843aa5"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+  </script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+</head>
+<body>
+<!-- Fixed header with period selector -->
+<header class="events-header" id="eventsHeader">
+  <div class="period-bar">
+    <button id="btnPrev" class="period-btn">←</button>
+    <div class="period-labels">
+      <span id="tvMonth" class="period-label">January 2024</span>
+    </div>
+    <button id="btnNext" class="period-btn">→</button>
+  </div>
+  <div class="mode-toggle">
+    <button id="btnMonth" class="mode-btn active">Month</button>
+    <button id="btnYear" class="mode-btn">Year</button>
+  </div>
+</header>
+
+<!-- Scrollable event list -->
+<main class="events-scroll" id="eventsScroll">
+  <div id="eventList" class="event-list">
+    <!-- Events loaded here -->
+  </div>
+</main>
+
+<!-- FAB - Add Event (admin only) -->
+<button id="fabAdd" class="fab hidden" aria-label="Add Event">+</button>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item" data-screen="home">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="runs.html" class="nav-item active" data-screen="events">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Runs</span>
+  </a>
+  <a href="trail.html" class="nav-item" data-screen="trails">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item" data-screen="chat">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="more.html" class="nav-item" data-screen="more">
+    <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+    <span>More</span>
+  </a>
+</nav>
+
+<script src="js/screens/events.js" type="module"></script>
+</body>
+</html>

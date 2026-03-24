@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Add Event</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/add-event.css"/>
+  
+  
+<script>
+  window.initMap = function() {
+    console.log('Google Maps API loaded via callback');
+    if (window.mapEls) {
+      window.initializeMap(window.mapEls);
+    } else {
+      console.log('Elements not ready yet, will retry...');
+      setTimeout(function() {
+        if (window.mapEls) window.initializeMap(window.mapEls);
+      }, 100);
+    }
+  };
+</script>
+  
+  <!-- Google Maps API with Places library - ADDED callback=initMap -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsY_c16HNeFgfvDIuVhpICAfFX8evggYI&libraries=places&callback=initMap" async defer></script>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
+      authDomain: "h3-global-app.firebaseapp.com",
+      projectId: "h3-global-app",
+      storageBucket: "h3-global-app.firebasestorage.app",
+      messagingSenderId: "174897234240",
+      appId: "1:174897234240:web:74612994c432f410843aa5"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    window.storage = getStorage(app);
+    window.auth = getAuth(app);
+  </script>
+</head>
+<body>
+<!-- Header -->
+<header class="page-header">
+  <h1 id="pageTitle">Add Event</h1>
+</header>
+
+<!-- Scrollable form -->
+<main class="form-scroll">
+  <form id="eventForm" class="event-form">
+    
+    <!-- Country, State, Kennel -->
+    <div class="input-group">
+      <label>Country</label>
+      <input type="text" id="actvCountry" list="countryList" required placeholder="Select Country" disabled/>
+      <datalist id="countryList"></datalist>
+    </div>
+    
+    <div class="input-group">
+      <label>State</label>
+      <input type="text" id="actvState" list="stateList" required placeholder="Select State" disabled/>
+      <datalist id="stateList"></datalist>
+    </div>
+    
+    <div class="input-group">
+      <label>Kennel</label>
+      <input type="text" id="actvKennel" list="kennelList" required placeholder="Select Kennel" disabled/>
+      <datalist id="kennelList"></datalist>
+    </div>
+    
+    <!-- Image Upload -->
+    <div class="image-section">
+      <label class="section-label">Add Run Image</label>
+      <div class="image-preview" id="imagePreview">
+        <img id="previewImg" src="" alt="Event image" class="hidden"/>
+        <span class="placeholder">No image selected</span>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" class="hidden"/>
+      <button type="button" id="btnSelectImage" class="btn-upload">Select Image</button>
+    </div>
+    
+    <!-- Run Title -->
+    <div class="input-group">
+      <label>Run Title</label>
+      <input type="text" id="etRunTitle" required/>
+    </div>
+    
+    <!-- Date & Time -->
+    <div class="date-row">
+      <div class="input-group">
+        <label>Start Date</label>
+        <input type="date" id="etStartDate" required/>
+      </div>
+      <div class="input-group">
+        <label>End Date</label>
+        <input type="date" id="etEndDate" required/>
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <label>Run Time</label>
+      <input type="time" id="etRunTime" required/>
+    </div>
+    
+    <!-- Location -->
+    <div class="input-group">
+      <label>Location Address</label>
+      <input type="text" id="actvAddress" list="savedPlacesList" placeholder="Search address..."/>
+      <datalist id="savedPlacesList"></datalist>
+    </div>
+    
+    <div class="btn-row">
+      <button type="button" id="btnSearchLocation" class="btn-secondary">Search In Map</button>
+      <button type="button" id="btnSaveLocation" class="btn-secondary hidden">Save Location</button>
+    </div>
+    
+    <button type="button" id="btnUseCurrentLocation" class="btn-secondary full">Use My Current Location</button>
+    
+    <!-- Map -->
+    <div class="map-container" id="mapContainer">
+      <div id="map" class="map" style="width: 100%; height: 300px; background-color: #f0f0f0;"></div>
+    </div>
+	
+	  <!-- Registration Details -->
+    
+     <!-- Currency -->
+    <div class="input-group">
+      <label>Currency</label>
+      <select id="actvCurrency">
+        <option value="USD" selected>USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+        <option value="NGN">NGN</option>
+        <option value="THB">THB</option>
+      </select>
+    </div>
+    
+    <!-- EARLY BIRD SECTION -->
+    <label class="section-label">Early Bird Pricing</label>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="chkEarlyBirdEnabled"/> Enable Early Bird
+      </label>
+    </div>
+    
+    <div id="earlyBirdSection" class="hidden">
+      <div class="input-group">
+        <label>Early Bird Deadline (Date)</label>
+        <input type="date" id="etEarlyBirdDeadline"/>
+      </div>
+      
+      <div class="input-group">
+        <label>OR Maximum Early Bird Slots</label>
+        <input type="number" id="etEarlyBirdMaxSlots" min="1" placeholder="Leave empty for unlimited"/>
+      </div>
+      
+      <div class="input-group">
+        <label>Early Bird Rego Fee</label>
+        <input type="number" id="etEarlyBirdRegoFee" step="0.01" min="0"/>
+      </div>
+    </div>
+    
+    <!-- REGULAR PRICING -->
+    <label class="section-label">Regular Pricing</label>
+    <div class="input-group">
+      <label>Regular Rego Fee</label>
+      <input type="number" id="etRegularRegoFee" step="0.01" min="0" required/>
+    </div>
+    
+  
+   
+    
+    <!-- Sponsorship -->
+    <div class="input-group">
+      <label>For Sponsorship</label>
+      <textarea id="etSponsorship" rows="2"></textarea>
+    </div>
+    
+   
+   
+    
+        <!-- Accommodation -->
+    <label class="section-label">Accommodation (Optional)</label>
+    <div id="accommodationContainer" class="accommodation-list"></div>
+    <button type="button" id="btnAddAccommodation" class="btn-icon">+ Add Room Type</button>
+    
+   
+    
+    <!-- What to Expect -->
+    <div class="input-group">
+      <label>What to Expect</label>
+      <textarea id="etWhatToExpect" rows="3"></textarea>
+    </div>
+    
+    <!-- Signed By -->
+    <div class="input-group">
+      <label>Signed By</label>
+      <input type="text" id="actvSignedBy" list="hashersList"/>
+      <datalist id="hashersList"></datalist>
+    </div>
+    
+    <!-- Save -->
+    <button type="submit" id="btnSaveRun" class="btn-save">Save Event</button>
+    <div id="progressSave" class="progress hidden">Saving...</div>
+    
+  </form>
+</main>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="events.html" class="nav-item active">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Events</span>
+  </a>
+  <a href="trails.html" class="nav-item">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="more.html" class="nav-item">
+    <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+    <span>More</span>
+  </a>
+</nav>
+
+<script src="js/screens/add-event.js" type="module"></script>
+</body>
+</html>

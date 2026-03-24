@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Business Hub - Hash House Harriers</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/business-hub.css"/>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+
+    
+    <style>
+	
+        :root {
+            --clr-primary: #FF6D00;
+            --clr-primary-dark: #E65100;
+            --clr-bg: #f5f5f5;
+            --clr-card: #ffffff;
+            --clr-text: #333333;
+            --clr-text-secondary: #666666;
+            --clr-border: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--clr-bg);
+            color: var(--clr-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--clr-primary);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .btn-back {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            text-decoration: none;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        /* Circular Loading Spinner - EXACTLY like runs page */
+        .spinner-container {
+            margin-bottom: 32px;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 6px solid var(--clr-border);
+            border-top-color: var(--clr-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Coming Soon Content */
+        .coming-soon-content {
+            opacity: 0;
+            animation: fadeIn 0.5s ease 1s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--clr-primary);
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--clr-text-secondary);
+            line-height: 1.6;
+            max-width: 300px;
+        }
+
+        /* Features preview */
+        .features {
+            margin-top: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease 1.5s forwards;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--clr-card);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 24px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            color: var(--clr-text-secondary);
+        }
+
+        /* ============================================
+           BOTTOM NAV - EXACTLY LIKE HOME PAGE
+           ============================================ */
+        .bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            height: 56px;
+            z-index: 10;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-top: 4px;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            filter: brightness(0);
+            transition: filter 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 12px;
+            margin-top: 2px;
+            color: #000;
+            transition: color 0.2s;
+        }
+
+        /* selected state - orange */
+        .nav-item.active .nav-icon {
+            filter: brightness(0) saturate(100%) invert(48%) sepia(95%) saturate(3289%) hue-rotate(5deg) brightness(102%) contrast(101%);
+        }
+
+        .nav-item.active span {
+            color: var(--clr-primary);
+            font-weight: bold;
+        }
+
+        /* More dialog styles */
+        .more-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .more-dialog-content {
+            background: #fff;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 16px 16px 0 0;
+            padding: 16px;
+            animation: slideUp 0.3s ease;
+        }
+
+        .more-dialog-content h3 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+        }
+
+        .more-option {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 8px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .more-option:hover {
+            background: #e0e0e0;
+        }
+
+        .more-cancel {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-top: 8px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .more-cancel:hover {
+            background: #f5f5f5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* Night mode */
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        body.night-mode .bottom-nav {
+            background: #2a2a2a;
+            border-top-color: #333;
+        }
+
+        body.night-mode .bottom-nav .nav-item span {
+            color: #aaa;
+        }
+
+        body.night-mode .bottom-nav .nav-item.active span {
+            color: var(--clr-primary);
+        }
+
+        body.night-mode .feature-item {
+            background: #2a2a2a;
+        }
+		
+		/* Bottom Nav Badge Styles */
+.nav-item {
+  position: relative;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #FF6D00;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.nav-badge:empty {
+  display: none;
+}
+    </style>
+	</script>
+  <!-- Badge Service - Add in <head> of every page -->
+<script type="module">
+  import badgeService from './js/screens/badge-service.js';
+  window.badgeService = badgeService;
+  badgeService.init();
+</script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="index.html" class="btn-back">←</a>
+        <h1>Business Hub</h1>
+        <div style="width: 40px;"></div>
+    </header>
+
+    <!-- Main Content with Loading Animation -->
+    <main class="main-content">
+        <!-- Circular Loading Spinner -->
+        <div class="spinner-container" id="loadingSpinner">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Coming Soon Content (fades in after loading) -->
+        <div class="coming-soon-content" id="comingSoonContent" style="display: none;">
+            <div class="icon">🏗️</div>
+            <h2 class="title">Coming Soon!</h2>
+            <p class="subtitle">
+                The Business Hub is under construction. 
+                Soon you'll be able to manage hash-related businesses, 
+                merchandise, and special offers here.
+            </p>
+
+            <!-- Preview Features -->
+            <div class="features">
+                <div class="feature-item">
+                    <span class="feature-icon">🏪</span>
+                    <span class="feature-text">Merchant Directory</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">👕</span>
+                    <span class="feature-text">Hash Merchandise</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🍺</span>
+                    <span class="feature-text">Beer Sponsorships</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🎫</span>
+                    <span class="feature-text">Event Tickets</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom nav EXACTLY like home page -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item" data-screen="home">
+            <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+            <span>Home</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="runs">
+            <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+            <span>Runs</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="trails">
+            <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+            <span>Trails</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="chat">
+            <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+            <span>Chat</span>
+        </a>
+        <a href="#" class="nav-item active" data-screen="more">
+            <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+            <span>More</span>
+        </a>
+    </nav>
+
+    <script>
+        // Show loading for 2 seconds then reveal content
+        setTimeout(() => {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('comingSoonContent').style.display = 'block';
+        }, 2000);
+
+        // Bottom nav handler - EXACTLY like home page
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+            item.onclick = (e) => {
+                e.preventDefault();
+                const screen = item.dataset.screen;
+                handleBottomNav(screen);
+            };
+        });
+
+        function handleBottomNav(screen) {
+            switch(screen) {
+                case 'home':
+                    window.location.href = 'index.html';
+                    break;
+                case 'runs':
+                    window.location.href = 'runs.html';
+                    break;
+                case 'trails':
+                    window.location.href = 'trail.html';
+                    break;
+                case 'chat':
+                    window.location.href = 'chat.html';
+                    break;
+                case 'more':
+                    showMoreOptions();
+                    break;
+            }
+        }
+
+        // More options - EXACTLY like home page
+        function showMoreOptions() {
+            const options = [
+                'Logout',
+                'Business Hub',
+                'Personal',
+                'Songs',
+                'App Tour ON/OFF',
+                'Toggle Day/Night',
+                'About Hash'
+            ];
+            
+            const dialog = document.createElement('div');
+            dialog.className = 'more-dialog';
+            dialog.innerHTML = `
+                <div class="more-dialog-content">
+                    <h3>More</h3>
+                    ${options.map((opt, i) => `<button class="more-option" data-index="${i}">${opt}</button>`).join('')}
+                    <button class="more-cancel">Cancel</button>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            dialog.querySelectorAll('.more-option').forEach(btn => {
+                btn.onclick = () => {
+                    const index = parseInt(btn.dataset.index);
+                    dialog.remove();
+                    handleMoreOption(index);
+                };
+            });
+            
+            dialog.querySelector('.more-cancel').onclick = () => dialog.remove();
+            dialog.onclick = (e) => {
+                if (e.target === dialog) dialog.remove();
+            };
+        }
+
+        function handleMoreOption(index) {
+            switch(index) {
+                case 0:
+                    logout();
+                    break;
+                case 1:
+                    // Already on business hub
+                    break;
+                case 2:
+                    window.location.href = 'personal.html';
+                    break;
+                case 3:
+                    window.location.href = 'songs.html';
+                    break;
+                case 4:
+                    const wasDisabled = localStorage.getItem('tour_disabled') === 'true';
+                    localStorage.setItem('tour_disabled', !wasDisabled);
+                    alert(`Tour ${wasDisabled ? 'enabled' : 'disabled'}`);
+                    break;
+                case 5:
+                    toggleDayNight();
+                    break;
+                case 6:
+                    showAboutHashDialog();
+                    break;
+            }
+        }
+
+        function toggleDayNight() {
+            const isNight = localStorage.getItem('night_mode') === 'true';
+            localStorage.setItem('night_mode', !isNight);
+            document.body.classList.toggle('night-mode', !isNight);
+        }
+
+        function showAboutHashDialog() {
+            const modal = document.createElement('div');
+            modal.className = 'more-dialog';
+            modal.innerHTML = `
+                <div class="more-dialog-content" style="max-width: 90%; border-radius: 16px; margin: auto; max-height: 80vh; overflow-y: auto;">
+                    <div style="padding: 16px;">
+                        <h2 style="color: var(--clr-primary); margin-bottom: 16px;">About Hash House Harriers</h2>
+                        <p style="line-height: 1.6; margin-bottom: 12px;">
+                            <b>HISTORY</b><br>
+                            The Hash began in December 1938 in Kuala Lumpur, Malaysia...
+                        </p>
+                    </div>
+                    <button class="more-cancel" style="margin-top: 16px;">ON-ON</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.querySelector('.more-cancel').onclick = () => modal.remove();
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
+        }
+
+        async function logout() {
+            try {
+                // Import Firebase auth dynamically
+                const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                const auth = getAuth();
+                await signOut(auth);
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

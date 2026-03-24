@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Add Event</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/add-event.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script type="module" src="js/subscription-guard.js"></script>
+
+  
+  <!-- Google Maps init callback (must be before API script) -->
+  <script>
+    window.initMap = function() {
+      console.log('Google Maps API loaded via callback');
+      if (window.mapEls) {
+        window.initializeMap(window.mapEls);
+      } else {
+        console.log('Elements not ready yet, will retry...');
+        setTimeout(function() {
+          if (window.mapEls) window.initializeMap(window.mapEls);
+        }, 100);
+      }
+    };
+  </script>
+  
+  <!-- Google Maps API with Places library -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsY_c16HNeFgfvDIuVhpICAfFX8evggYI&libraries=places&callback=initMap" async defer></script>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
+      authDomain: "h3-global-app.firebaseapp.com",
+      projectId: "h3-global-app",
+      storageBucket: "h3-global-app.firebasestorage.app",
+      messagingSenderId: "174897234240",
+      appId: "1:174897234240:web:74612994c432f410843aa5"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    window.storage = getStorage(app);
+    window.auth = getAuth(app);
+  </script>
+  
+  <!-- CropperJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+</head>
+<body>
+<!-- Header -->
+<header class="page-header">
+  <h1 id="pageTitle">Add Event</h1>
+</header>
+
+<!-- Scrollable form -->
+<main class="form-scroll">
+  <form id="eventForm" class="event-form">
+    
+    <!-- Country, State, Kennel -->
+    <div class="input-group">
+      <label>Country</label>
+      <input type="text" id="actvCountry" list="countryList" required placeholder="Select Country" disabled/>
+      <datalist id="countryList"></datalist>
+    </div>
+    
+    <div class="input-group">
+      <label>State</label>
+      <input type="text" id="actvState" list="stateList" required placeholder="Select State" disabled/>
+      <datalist id="stateList"></datalist>
+    </div>
+    
+    <div class="input-group">
+      <label>Kennel</label>
+      <input type="text" id="actvKennel" list="kennelList" required placeholder="Select Kennel" disabled/>
+      <datalist id="kennelList"></datalist>
+    </div>
+	
+	<!-- ADD THIS: Collaboration checkbox -->
+<div class="form-group">
+  <label class="checkbox-label">
+    <input type="checkbox" id="chkCollaboration"> Is This a collaborative event
+  </label>
+</div>
+
+<!-- ADD THIS: Container for multiple kennel selection (hidden by default) -->
+<div id="collaborationSection" class="hidden">
+  <div class="form-group">
+    <label>Collaborating Kennels</label>
+    <div id="kennelChipsContainer" class="kennel-chips"></div>
+    <button type="button" id="btnAddCollaboratingKennel" class="btn-secondary">+ Add Kennel</button>
+  </div>
+</div>
+
+<!-- ADD THIS: Template for kennel selection row -->
+<div id="collaborationKennelTemplate" class="hidden">
+  <div class="collab-kennel-row">
+    <select class="collab-country"><option value="">Select Country</option></select>
+    <select class="collab-state" disabled><option value="">Select State</option></select>
+    <select class="collab-kennel" disabled><option value="">Select Kennel</option></select>
+    <button type="button" class="btn-remove-kennel">×</button>
+  </div>
+</div>
+    
+    <!-- Image Upload -->
+    <div class="image-section">
+      <label class="section-label">Add Run Image</label>
+      <div class="image-preview" id="imagePreview">
+        <img id="previewImg" src="" alt="Event image" class="hidden"/>
+        <span class="placeholder">No image selected</span>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" class="hidden"/>
+      <button type="button" id="btnSelectImage" class="btn-upload">Select Image</button>
+    </div>
+    
+    <!-- Run Title -->
+    <div class="input-group">
+      <label>Run Title</label>
+      <input type="text" id="etRunTitle" required/>
+    </div>
+	
+	<div class="input-group">
+  <label>Event Details</label>
+  <textarea id="etEventDetails" rows="4" placeholder="Event description, theme, activities, and other important details..."></textarea>
+</div>
+
+    
+    <!-- Date & Time -->
+    <div class="date-row">
+      <div class="input-group">
+        <label>Start Date</label>
+        <input type="date" id="etStartDate" required/>
+      </div>
+      <div class="input-group">
+        <label>End Date</label>
+        <input type="date" id="etEndDate" required/>
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <label>Run Time</label>
+      <input type="time" id="etRunTime" required/>
+    </div>
+    
+    <!-- Location -->
+    <div class="input-group">
+      <label>Location Address</label>
+      <input type="text" id="actvAddress" list="savedPlacesList" placeholder="Search address..."/>
+      <datalist id="savedPlacesList"></datalist>
+    </div>
+    
+    <div class="btn-row">
+      <button type="button" id="btnSearchLocation" class="btn-secondary">Search In Map</button>
+      <button type="button" id="btnSaveLocation" class="btn-secondary hidden">Save Location</button>
+    </div>
+    
+    <button type="button" id="btnUseCurrentLocation" class="btn-secondary full">Use My Current Location</button>
+    
+    <!-- Map -->
+    <div class="map-container" id="mapContainer">
+      <div id="map" class="map" style="width: 100%; height: 300px; background-color: #f0f0f0;"></div>
+    </div>
+	
+	  <!-- Registration Details -->
+    
+     <!-- Currency -->
+    <div class="input-group">
+      <label>Currency</label>
+      <select id="actvCurrency">
+        <option value="USD" selected>USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+        <option value="NGN">NGN</option>
+        <option value="THB">THB</option>
+      </select>
+    </div>
+    
+    <!-- EARLY BIRD SECTION -->
+    <label class="section-label">Early Bird Pricing</label>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="chkEarlyBirdEnabled"/> Enable Early Bird
+      </label>
+    </div>
+    
+    <div id="earlyBirdSection" class="hidden">
+      <div class="input-group">
+        <label>Early Bird Deadline (Date)</label>
+        <input type="date" id="etEarlyBirdDeadline"/>
+      </div>
+      
+      <div class="input-group">
+        <label>OR Maximum Early Bird Slots</label>
+        <input type="number" id="etEarlyBirdMaxSlots" min="1" placeholder="Leave empty for unlimited"/>
+      </div>
+      
+      <div class="input-group">
+        <label>Early Bird Rego Fee</label>
+        <input type="number" id="etEarlyBirdRegoFee" step="0.01" min="0"/>
+      </div>
+    </div>
+    
+    <!-- REGULAR PRICING -->
+    <label class="section-label">Regular Pricing</label>
+    <div class="input-group">
+      <label>Regular Rego Fee</label>
+      <input type="number" id="etRegularRegoFee" step="0.01" min="0" required/>
+    </div>
+	
+	    <!-- Account Details Button -->
+    <button type="button" id="btnOpenAccountDialog" class="btn-secondary full">Add Account Details</button>
+    <div id="accountDetailsSummary" class="hidden" style="padding: 12px; background: #e8f5e9; border-radius: 8px; color: #2e7d32; font-size: 14px; text-align: center; margin-top: 8px;">Account details added</div>
+    
+  
+   
+    
+    <!-- Sponsorship -->
+    <div class="input-group">
+      <label>For Sponsorship</label>
+      <textarea id="etSponsorship" rows="2"></textarea>
+    </div>
+    
+   
+   
+    
+        <!-- Accommodation -->
+    <label class="section-label">Accommodation (Optional)</label>
+    <div id="accommodationContainer" class="accommodation-list"></div>
+    <button type="button" id="btnAddAccommodation" class="btn-icon">+ Add Room Type</button>
+    
+   
+    
+    <!-- What to Expect -->
+    <div class="input-group">
+      <label>What to Expect</label>
+      <textarea id="etWhatToExpect" rows="3"></textarea>
+    </div>
+    
+    <!-- Signed By -->
+<div class="input-group">
+  <label>Signed By</label>
+  <!-- Container for both single and multi-select modes -->
+  <div id="signedByContainer">
+    <!-- Single kennel mode: dropdown -->
+    <select id="actvSignedBy" required>
+      <option value="">Select a Hasher...</option>
+    </select>
+    
+    <!-- Collaboration mode: multi-select chips (hidden by default) -->
+    <div id="signedByMultiWrapper" class="hidden">
+      <div id="signedByChipsContainer" class="chips-container"></div>
+      <div class="hare-autocomplete-wrapper">
+        <input type="text" id="signedByMultiInput" placeholder="Type to add signers..." autocomplete="off">
+        <div id="signedByDropdown" class="hare-dropdown"></div>
+      </div>
+      <p class="hint">Max 5 signers allowed</p>
+    </div>
+  </div>
+</div>
+    
+    <!-- Save -->
+    <button type="submit" id="btnSaveRun" class="btn-save">Save Event</button>
+    <div id="progressSave" class="progress hidden">Saving...</div>
+    
+  </form>
+</main>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="events.html" class="nav-item active">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Events</span>
+  </a>
+  <a href="trails.html" class="nav-item">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="more.html" class="nav-item">
+    <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+    <span>More</span>
+  </a>
+</nav>
+
+<script src="js/screens/add-event.js" type="module"></script>
+
+<!-- Account Details Dialog -->
+<div id="accountDialog" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px;">
+  <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #e0e0e0;">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0;">Account Details</h2>
+      <button type="button" id="btnCloseAccountDialog" style="background: none; border: none; font-size: 24px; color: #666; cursor: pointer;">&times;</button>
+    </div>
+    
+    <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="chkSameAccount"/> Use same account details for all payments
+        </label>
+      </div>
+      
+      <!-- Registration Account -->
+      <div style="padding: 12px; background: #f5f5f5; border-radius: 8px;">
+        <label class="section-label" style="color: #ff6b00; margin-top: 0;">Registration Payment</label>
+        <div class="input-group">
+          <label>Account Number</label>
+          <input type="text" id="dlgRegAccNo" inputmode="numeric"/>
+        </div>
+        <div class="input-group">
+          <label>Account Name</label>
+          <input type="text" id="dlgRegAccName"/>
+        </div>
+        <div class="input-group">
+          <label>Bank</label>
+          <input type="text" id="dlgRegBank"/>
+        </div>
+      </div>
+      
+      <!-- Sponsorship Account -->
+      <div id="dlgSponsorshipSection" style="padding: 12px; background: #f5f5f5; border-radius: 8px;">
+        <label class="section-label" style="color: #ff6b00; margin-top: 0;">Sponsorship Payment</label>
+        <div class="input-group">
+          <label>Account Number</label>
+          <input type="text" id="dlgSponsorAccNo" inputmode="numeric"/>
+        </div>
+        <div class="input-group">
+          <label>Account Name</label>
+          <input type="text" id="dlgSponsorAccName"/>
+        </div>
+        <div class="input-group">
+          <label>Bank</label>
+          <input type="text" id="dlgSponsorBank"/>
+        </div>
+      </div>
+      
+      <!-- Accommodation Account -->
+      <div id="dlgAccommodationSection" style="padding: 12px; background: #f5f5f5; border-radius: 8px;">
+        <label class="section-label" style="color: #ff6b00; margin-top: 0;">Accommodation Payment</label>
+        <div class="input-group">
+          <label>Account Number</label>
+          <input type="text" id="dlgAccAccNo" inputmode="numeric"/>
+        </div>
+        <div class="input-group">
+          <label>Account Name</label>
+          <input type="text" id="dlgAccAccName"/>
+        </div>
+        <div class="input-group">
+          <label>Bank</label>
+          <input type="text" id="dlgAccBank"/>
+        </div>
+      </div>
+    </div>
+    
+    <div style="padding: 16px; border-top: 1px solid #e0e0e0;">
+      <button type="button" id="btnSaveAccountDetails" class="btn-save" style="margin-top: 0;">Save Account Details</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+:root{
+  --clr-primary:#FF6D00;
+  --clr-secondary:#379D03;
+  --clr-badge:#FF9800;
+  --radius:12px;
+  --font:normal 16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#222;font:var(--font)}
+button{background:none;border:none;font:inherit;cursor:pointer}
+a{text-decoration:none;color:inherit}
+.hidden{display:none}
+.badge{
+  background:var(--clr-badge);
+  color:#fff;font-size:11px;font-weight:bold;
+  padding:2px 6px;border-radius:10px;min-width:18px;text-align:center;
+}
+/* reusable Android-like card drawable */

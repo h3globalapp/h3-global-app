@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>H3 Global – Add Run</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/add-run.css"/>
+  
+  <!-- Google Maps init callback (must be before API script) -->
+  <script>
+    window.initMap = function() {
+      console.log('Google Maps API loaded via callback');
+      if (window.mapEls) {
+        window.initializeMap(window.mapEls);
+      } else {
+        console.log('Elements not ready yet, will retry...');
+        setTimeout(function() {
+          if (window.mapEls) window.initializeMap(window.mapEls);
+        }, 100);
+      }
+    };
+  </script>
+  
+  <!-- Google Maps API with Places library -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsY_c16HNeFgfvDIuVhpICAfFX8evggYI&libraries=places&callback=initMap" async defer></script>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
+      authDomain: "h3-global-app.firebaseapp.com",
+      projectId: "h3-global-app",
+      storageBucket: "h3-global-app.firebasestorage.app",
+      messagingSenderId: "174897234240",
+      appId: "1:174897234240:web:74612994c432f410843aa5"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    window.storage = getStorage(app);
+    window.auth = getAuth(app);
+  </script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+</head>
+<body>
+<!-- Header -->
+<header class="page-header">
+  <h1 id="pageTitle">Add Run</h1>
+</header>
+
+<!-- Scrollable form -->
+<main class="form-scroll">
+  <form id="runForm" class="run-form">
+    
+    <!-- Country, State, Kennel -->
+    <div class="input-group">
+      <label>Country</label>
+      <input type="text" id="actvCountry" list="countryList" required placeholder="Select Country" disabled/>
+      <datalist id="countryList"></datalist>
+    </div>
+    
+    <div class="input-group">
+      <label>State</label>
+      <input type="text" id="actvState" list="stateList" required placeholder="Select State" disabled/>
+      <datalist id="stateList"></datalist>
+    </div>
+    
+    <div class="input-group">
+      <label>Kennel</label>
+      <input type="text" id="actvKennel" list="kennelList" required placeholder="Select Kennel" disabled/>
+      <datalist id="kennelList"></datalist>
+    </div>
+    
+    <!-- Image Upload -->
+    <div class="image-section">
+      <label class="section-label">Add Run Image</label>
+      <div class="image-preview" id="imagePreview">
+        <img id="previewImg" src="" alt="Run image" class="hidden"/>
+        <span class="placeholder">No image selected</span>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" class="hidden"/>
+      <button type="button" id="btnSelectImage" class="btn-upload">Select Image</button>
+    </div>
+    
+    <!-- Run Day -->
+    <div class="input-group">
+      <label>Run Day</label>
+  <input type="text" id="actvRunDay" list="dayList" required placeholder="Select Day" value="Thursday" readonly/>
+      <datalist id="dayList">
+        <option value="Monday">
+        <option value="Tuesday">
+        <option value="Wednesday">
+        <option value="Thursday">
+        <option value="Friday">
+        <option value="Saturday">
+        <option value="Sunday">
+      </datalist>
+    </div>
+    
+    <!-- Cadence Radio Group -->
+    <div class="input-group">
+      <label>Cadence</label>
+      <div class="radio-group" id="radioCadence">
+        <label class="radio-label">
+          <input type="radio" name="cadence" value="weekly" checked/>
+          <span>Weekly</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="cadence" value="bi-weekly"/>
+          <span>Bi-weekly</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="cadence" value="monthly"/>
+          <span>Monthly</span>
+        </label>
+      </div>
+    </div>
+    
+    <!-- Run Title -->
+    <div class="input-group">
+      <label>Run Title</label>
+      <input type="text" id="etRunTitle" required/>
+    </div>
+    
+    <!-- Run Number with Edit -->
+    <div class="input-group">
+      <label>Run Number</label>
+      <div class="input-with-icon">
+        <input type="text" id="etRunNumber" readonly required/>
+        <button type="button" id="btnEditRunNumber" class="btn-icon-edit">✎</button>
+      </div>
+    </div>
+    
+    <!-- Run Date -->
+    <div class="input-group">
+      <label>Run Date</label>
+      <input type="date" id="etRunDate" required/>
+    </div>
+    
+    <!-- Run Time -->
+    <div class="input-group">
+      <label>Run Time</label>
+      <input type="time" id="etRunTime" required/>
+    </div>
+    
+    <!-- Location Address -->
+    <div class="input-group">
+      <label>Location Address</label>
+      <input type="text" id="actvAddress" list="savedPlacesList" placeholder="Search address..."/>
+      <datalist id="savedPlacesList"></datalist>
+    </div>
+    
+    <div class="btn-row">
+      <button type="button" id="btnSearchLocation" class="btn-secondary">Search In Map</button>
+      <button type="button" id="btnSaveLocation" class="btn-secondary hidden">Save Location</button>
+    </div>
+    
+    <button type="button" id="btnUseCurrentLocation" class="btn-secondary full">Use My Current Location</button>
+    
+    <!-- Map -->
+    <div class="map-container" id="mapContainer">
+      <div id="map" class="map" style="width: 100%; height: 300px; background-color: #f0f0f0;"></div>
+    </div>
+    
+    <!-- Trail Type -->
+    <div class="input-group">
+      <label>Trail Type</label>
+      <input type="text" id="spinnerTrailType" list="trailTypeList" required placeholder="Select Trail Type"/>
+      <datalist id="trailTypeList">
+        <option value="Ball Breaker">
+        <option value="Live Trail">
+        <option value="Shiggy Trail">
+        <option value="City Trail">
+        <option value="Walking Trail">
+      </datalist>
+    </div>
+    
+    <!-- Rego Fee -->
+    <div class="input-group">
+      <label>Rego Fee</label>
+      <input type="number" id="etRegoFee" step="0.01" min="0" required/>
+    </div>
+    
+    <!-- Account Details -->
+    <label class="section-label">Rego Account Details</label>
+    <div class="input-group">
+      <label>Acc No</label>
+      <input type="text" id="etAccNo" inputmode="numeric"/>
+    </div>
+    <div class="input-group">
+      <label>Acc Name</label>
+      <input type="text" id="etAccName"/>
+    </div>
+    <div class="input-group">
+      <label>Bank</label>
+      <input type="text" id="etBank"/>
+    </div>
+    
+    <!-- Hares -->
+    <div class="input-group">
+      <label>Hare(s)</label>
+      <div class="chip-container" id="chipGroupHares"></div>
+      <input type="text" id="etHareInput" list="hareList" placeholder="Type hare name"/>
+      <datalist id="hareList"></datalist>
+    </div>
+    
+    <!-- Save -->
+    <button type="submit" id="btnSaveRun" class="btn-save">Save Run</button>
+    <div id="progressSave" class="progress hidden">Saving...</div>
+    
+  </form>
+</main>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item">
+    <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+    <span>Home</span>
+  </a>
+  <a href="events.html" class="nav-item">
+    <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+    <span>Events</span>
+  </a>
+  <a href="trails.html" class="nav-item">
+    <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+    <span>Trails</span>
+  </a>
+  <a href="chat.html" class="nav-item">
+    <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+    <span>Chat</span>
+  </a>
+  <a href="more.html" class="nav-item">
+    <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+    <span>More</span>
+  </a>
+</nav>
+
+<script src="js/screens/add-run.js" type="module"></script>
+
+<!-- Run Number Edit Dialog -->
+<div id="runNumberDialog" class="hidden dialog-overlay">
+  <div class="dialog-content">
+    <div class="dialog-header">
+      <h2>Edit Run Number</h2>
+      <button type="button" id="btnCloseRunNumberDialog" class="btn-close">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <div class="input-group">
+        <label>Run Number</label>
+        <input type="number" id="dlgRunNumber" min="1"/>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" id="btnSaveRunNumber" class="btn-save">OK</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>'''

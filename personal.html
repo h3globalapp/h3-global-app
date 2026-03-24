@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- CRITICAL: Removed maximum-scale and user-scalable (breaks iOS standalone) -->
+  <!-- Added viewport-fit=cover -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Personal - Hash House Harriers</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="H3 Global App">
+  <link rel="apple-touch-icon" href="/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#FF6D00">
+  <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/screens/personal.css"/>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => console.log('SW registered:', reg.scope))
+        .catch((err) => console.log('SW registration failed:', err));
+    }
+  </script>
+
+    
+    <!-- Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    
+    <style>
+	
+        :root {
+            --clr-primary: #FF6D00;
+            --clr-primary-dark: #E65100;
+            --clr-bg: #f5f5f5;
+            --clr-card: #ffffff;
+            --clr-text: #333333;
+            --clr-text-secondary: #666666;
+            --clr-border: #e0e0e0;
+            --clr-danger: #d32f2f;
+            --clr-success: #4CAF50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--clr-bg);
+            color: var(--clr-text);
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--clr-primary);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .btn-back {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* Profile Section */
+        .profile-section {
+            background: var(--clr-card);
+            padding: 24px 20px;
+            text-align: center;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .profile-image-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+
+        .profile-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--clr-primary);
+            background: var(--clr-bg);
+        }
+
+        .btn-edit-photo {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--clr-primary);
+            border: 3px solid white;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .btn-edit-photo svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .profile-name {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .profile-kennel {
+            color: var(--clr-text-secondary);
+            font-size: 16px;
+        }
+
+        /* Info Cards */
+        .info-card {
+            background: var(--clr-card);
+            margin: 0 16px 16px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--clr-border);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 14px;
+            color: var(--clr-text-secondary);
+            font-weight: 500;
+        }
+
+        .info-value-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--clr-text);
+        }
+
+        .info-input {
+            display: none;
+            padding: 8px 12px;
+            border: 2px solid var(--clr-primary);
+            border-radius: 8px;
+            font-size: 16px;
+            width: 150px;
+            text-align: right;
+        }
+
+        .btn-edit {
+            background: none;
+            border: none;
+            color: var(--clr-primary);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-edit svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .btn-save {
+            display: none;
+            background: var(--clr-primary);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-save:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Designation Select */
+        .designation-select {
+            display: none;
+            padding: 8px 12px;
+            border: 2px solid var(--clr-primary);
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            min-width: 150px;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            background: var(--clr-card);
+            margin: 0 16px 16px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stats-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--clr-text);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--clr-border);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--clr-text-secondary);
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--clr-primary);
+        }
+
+        /* Delete Account */
+        .danger-zone {
+            background: var(--clr-card);
+            margin: 0 16px 24px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #ffcdd2;
+        }
+
+        .danger-title {
+            color: var(--clr-danger);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .danger-text {
+            color: var(--clr-text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .btn-delete {
+            width: 100%;
+            padding: 14px;
+            background: var(--clr-danger);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-delete:active {
+            transform: scale(0.98);
+        }
+
+        /* ============================================
+           BOTTOM NAV - EXACTLY LIKE HOME.CSS
+           ============================================ */
+        .bottom-nav{
+            display:flex;
+            position:fixed;
+            bottom:0;
+            left:0;
+            right:0;
+            background:#fff;
+            border-top:1px solid #e0e0e0;
+            height:56px;
+            z-index:10;
+        }
+        
+        .nav-item{
+            flex:1;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            padding-top:4px;
+            text-decoration:none;
+            cursor:pointer;
+            border: none;
+            background: none;
+        }
+        
+        .nav-icon{
+            width:24px;
+            height:24px;
+            filter:brightness(0);
+            transition:filter 0.2s;
+        }
+        
+        .nav-item span{
+            font-size:12px;
+            margin-top:2px;
+            color:#000;
+            transition:color 0.2s;
+        }
+        
+        /* selected state - orange */
+        .nav-item.active .nav-icon{
+            filter:brightness(0) saturate(100%) invert(48%) sepia(95%) saturate(3289%) hue-rotate(5deg) brightness(102%) contrast(101%);
+        }
+        
+        .nav-item.active span{
+            color:var(--clr-primary);
+            font-weight:bold;
+        }
+
+        /* More Dialog Styles - EXACTLY LIKE HOME.CSS */
+        .more-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .more-dialog-content {
+            background: #fff;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 16px 16px 0 0;
+            padding: 16px;
+            animation: slideUp 0.3s ease;
+        }
+
+        .more-dialog-content h3 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+        }
+
+        .more-option {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 8px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .more-option:hover {
+            background: #e0e0e0;
+        }
+
+        .more-cancel {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-top: 8px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .more-cancel:hover {
+            background: #f5f5f5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* Cropper Modal */
+        .cropper-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            flex-direction: column;
+        }
+
+        .cropper-modal.active {
+            display: flex;
+        }
+
+        .cropper-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .cropper-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .cropper-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #cropperImage {
+            max-width: 100%;
+            max-height: 60vh;
+            display: block;
+        }
+
+        /* Cropper.js custom styles for circular crop */
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 50%;
+        }
+
+        .cropper-view-box {
+            outline: 0;
+            box-shadow: 0 0 0 1px var(--clr-primary);
+        }
+
+        .cropper-point {
+            background-color: var(--clr-primary);
+        }
+
+        .cropper-line {
+            background-color: var(--clr-primary);
+        }
+
+        .cropper-bg {
+            background-image: repeating-conic-gradient(#333 0% 25%, #444 0% 50%);
+            background-size: 20px 20px;
+        }
+
+        .cropper-controls {
+            padding: 20px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .zoom-control label {
+            font-size: 14px;
+            color: var(--clr-text-secondary);
+            min-width: 50px;
+        }
+
+        .zoom-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--clr-border);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--clr-primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .cropper-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .cropper-actions button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-cancel-crop {
+            background: var(--clr-bg);
+            color: var(--clr-text);
+        }
+
+        .btn-confirm-crop {
+            background: var(--clr-primary);
+            color: white;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--clr-border);
+            border-top-color: var(--clr-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Confirmation Dialog */
+        .confirm-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10002;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .confirm-dialog.active {
+            display: flex;
+        }
+
+        .confirm-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .confirm-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--clr-danger);
+        }
+
+        .confirm-text {
+            color: var(--clr-text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .confirm-actions button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-confirm-cancel {
+            background: var(--clr-bg);
+            color: var(--clr-text);
+        }
+
+        .btn-confirm-delete {
+            background: var(--clr-danger);
+            color: white;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10003;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Hidden file input */
+        #fileInput {
+            display: none;
+        }
+
+        /* Night mode */
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        body.night-mode .bottom-nav {
+            background: #2a2a2a;
+            border-top-color: #333;
+        }
+
+        body.night-mode .bottom-nav .nav-item span {
+            color: #aaa;
+        }
+
+        body.night-mode .bottom-nav .nav-item.active span {
+            color: var(--clr-primary);
+        }
+		
+		/* Bottom Nav Badge Styles */
+.nav-item {
+  position: relative;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #FF6D00;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.nav-badge:empty {
+  display: none;
+}
+    </style>
+	</script>
+  <!-- Badge Service - Add in <head> of every page -->
+<script type="module">
+  import badgeService from './js/screens/badge-service.js';
+  window.badgeService = badgeService;
+  badgeService.init();
+</script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <button class="btn-back" onclick="history.back()">←</button>
+        <h1>Personal</h1>
+        <div style="width: 40px;"></div>
+    </header>
+
+    <!-- Profile Section -->
+    <section class="profile-section">
+        <div class="profile-image-container">
+            <img id="profileImage" class="profile-image" src="images/placeholder_profile.png" alt="Profile">
+            <button class="btn-edit-photo" id="btnEditPhoto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+            </button>
+        </div>
+        <h2 class="profile-name" id="displayName">Loading...</h2>
+        <p class="profile-kennel" id="displayKennel">Loading...</p>
+    </section>
+
+    <!-- Info Cards -->
+    <div class="info-card">
+        <div class="info-row">
+            <span class="info-label">Hash Handle</span>
+            <div class="info-value-container">
+                <span class="info-value" id="hashHandle">-</span>
+                <input type="text" class="info-input" id="hashInput" placeholder="Enter hash name">
+                <button class="btn-edit" id="btnEditHash">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="btn-save" id="btnSaveHash">Save</button>
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <span class="info-label">Kennel</span>
+            <div class="info-value-container">
+                <span class="info-value" id="kennel">-</span>
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <span class="info-label">Designation</span>
+            <div class="info-value-container">
+                <span class="info-value" id="designation">-</span>
+                <select class="designation-select" id="designationSelect">
+                    <option value="">Select designation</option>
+                </select>
+                <button class="btn-edit" id="btnEditDesig">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="btn-save" id="btnSaveDesig">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-section">
+        <h3 class="stats-title">Run Statistics</h3>
+        <div id="statsContainer">
+            <div class="stat-item">
+                <span class="stat-label">Total Runs</span>
+                <span class="stat-value" id="totalRuns">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Account -->
+    <div class="danger-zone">
+        <div class="danger-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Danger Zone
+        </div>
+        <p class="danger-text">Once you delete your account, there is no going back. Please be certain.</p>
+        <button class="btn-delete" id="btnDeleteAccount">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Delete Account
+        </button>
+    </div>
+
+    <!-- Bottom nav EXACTLY like home page -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item" data-screen="home">
+            <img src="icons/ic_home.png" alt="" class="nav-icon"/>
+            <span>Home</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="runs">
+            <img src="icons/ic_runs.png" alt="" class="nav-icon"/>
+            <span>Runs</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="trails">
+            <img src="icons/ic_trails.png" alt="" class="nav-icon"/>
+            <span>Trails</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="chat">
+            <img src="icons/ic_chat.png" alt="" class="nav-icon"/>
+            <span>Chat</span>
+        </a>
+        <a href="#" class="nav-item active" data-screen="more">
+            <img src="icons/ic_more.png" alt="" class="nav-icon"/>
+            <span>More</span>
+        </a>
+    </nav>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="fileInput" accept="image/*">
+
+    <!-- Cropper Modal -->
+    <div class="cropper-modal" id="cropperModal">
+        <div class="cropper-header">
+            <h3>Crop Profile Picture</h3>
+            <button class="btn-edit" id="btnCloseCropper" style="color: white;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="cropper-container">
+            <img id="cropperImage" src="" alt="Image to crop">
+        </div>
+        <div class="cropper-controls">
+            <div class="zoom-control">
+                <label>Zoom</label>
+                <input type="range" class="zoom-slider" id="zoomSlider" min="0.1" max="3" step="0.1" value="1">
+            </div>
+            <div class="cropper-actions">
+                <button class="btn-cancel-crop" id="btnCancelCrop">Cancel</button>
+                <button class="btn-confirm-crop" id="btnConfirmCrop">Crop & Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingText">Uploading...</p>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div class="confirm-dialog" id="confirmDialog">
+        <div class="confirm-content">
+            <h3 class="confirm-title">Delete Account?</h3>
+            <p class="confirm-text">This will permanently delete your account, profile picture, and all associated data. This action cannot be undone.</p>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" id="btnCancelDelete">Cancel</button>
+                <button class="btn-confirm-delete" id="btnConfirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="js/screens/personal.js" type="module"></script>
+</body>
+</html>

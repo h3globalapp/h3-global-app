@@ -121,10 +121,7 @@ export async function initWebPushNotifications(userId) {
     });
 
     return token;
-  } catch (error) {
-    console.error('Web push error:', error);
-    return null;
-  }
+  } 
 }
 
 // ==================== AUTH STATE ====================

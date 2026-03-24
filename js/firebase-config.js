@@ -121,7 +121,9 @@ export async function initWebPushNotifications(userId) {
     });
 
     return token;
-  } 
+  }  catch (error) {
+    return null;
+  }
 }
 
 // ==================== AUTH STATE ====================

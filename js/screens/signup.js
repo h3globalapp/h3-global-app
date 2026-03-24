@@ -434,8 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
           
           // Step 3: Navigate to verify OTP page
-          console.log('About to redirect to verify-otp.html');
-debugger; // This will pause execution - check if it reaches here
+      
 window.location.href = 'verify-otp.html';
           
         } catch (error) {

@@ -1,3 +1,5 @@
+// js/screens/signup.js - CLEAN VERSION
+
 document.addEventListener('DOMContentLoaded', () => {
   // Wait for Firebase to be ready
   if (!window.db) {
@@ -27,10 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Load countries from Firestore
       async function loadCountries() {
         try {
-          console.log('Loading countries...');
           const snap = await getDocs(getCol('locations'));
           const countries = snap.docs.map(d => d.id).sort();
-          console.log('Countries loaded:', countries);
           
           countries.forEach(c => {
             const opt = document.createElement('option');
@@ -54,10 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
         els.designation.disabled = true;
         
         try {
-          console.log('Loading states for:', els.country.value);
           const snap = await getDocs(getCol(`locations/${els.country.value}/states`));
           const states = snap.docs.map(d => d.id).sort();
-          console.log('States loaded:', states);
           
           states.forEach(s => {
             const opt = document.createElement('option');
@@ -78,11 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
         els.designation.disabled = true;
         
         try {
-          console.log('Loading kennels for:', els.country.value, els.state.value);
           const snap = await getDocs(getCol(`locations/${els.country.value}/states/${els.state.value}/kennels`));
           const kennels = snap.docs.map(d => d.id).sort();
           kennels.push('(+ Add Kennel)');
-          console.log('Kennels loaded:', kennels);
           
           kennels.forEach(k => {
             const opt = document.createElement('option');
@@ -112,8 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
         els.designation.disabled = false;
         
         try {
-          console.log('Loading designations for:', els.kennel.value);
-          
           // Get role definitions
           const roleDoc = await getDoc(getDocRef('role/roleid'));
           const noTier = roleDoc.data()?.['No Tier'] || [];
@@ -142,8 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!tier1Exists) allDesignations.push(...availableTier1);
           allDesignations.push(...availableTier2);
           allDesignations.push(...noTier);
-          
-          console.log('Designations loaded:', allDesignations);
           
           allDesignations.forEach(d => {
             const opt = document.createElement('option');
@@ -193,9 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
         els.modal.classList.add('hidden');
         document.getElementById('etPrefix').value = '';
         
-              // Create kennel request and temp kennel (matches Android logic)
+        // Create kennel request and temp kennel (matches Android logic)
         try {
-          const { addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+          const { addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
           
           // Get phone number from form
           const phone = document.getElementById('countryCodePicker').value + document.getElementById('etPhone').value.replace(/\D/g, '');
@@ -217,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // 2. Create TEMP kennel doc (matches Android tempKennelName logic)
           // Generate temp ID like Android: "PENDING-" + hashCode base36
-          const tempId = this.tempKennelName(canonical);
+          const tempId = tempKennelName(canonical);
           const tempRef = doc(window.db, `locations/${els.country.value}/states/${els.state.value}/kennels/${tempId}`);
           await setDoc(tempRef, {
             createdAt: Timestamp.now(),
@@ -238,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadDesignations();
       };
 
-           // Canonical name helper (matches Android)
+      // Canonical name helper (matches Android)
       function canonicalKennelName(raw) {
         let s = raw.trim().toLowerCase();
         s = s.replace(/\bh3\b/g, 'hash');
@@ -268,8 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Form submit - ALL users use Termii
       els.form.onsubmit = async (e) => {
         e.preventDefault();
-		// ADD THIS LOG - Line ~200
-  console.log('1. Form submitted - starting signup flow');
         els.btnSignup.disabled = true;
         els.btnSignup.textContent = 'Sending OTP...';
         
@@ -284,11 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
           kennel: els.kennel.value,
           designation: els.designation.value
         };
-		
-		  // ADD THIS LOG - Line ~215
-  console.log('2. Phone number collected:', signupData.phone);
         
-               // Validate
+        // Validate
         if (!signupData.hashHandle || !signupData.firstName || !signupData.lastName || 
             !signupData.phone || !signupData.country || !signupData.state || 
             !signupData.kennel || !signupData.designation) {
@@ -297,12 +284,10 @@ document.addEventListener('DOMContentLoaded', () => {
           els.btnSignup.textContent = 'CREATE ACCOUNT';
           return;
         }
-		  // ADD THIS LOG - Line ~227
-  console.log('3. All fields valid, checking if phone exists...');
         
-              // Check if phone number already exists
+        // Check if phone number already exists
         try {
-          const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+          const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
           const phoneRef = doc(window.db, 'phoneNumbers', signupData.phone);
           const phoneDoc = await getDoc(phoneRef);
           
@@ -414,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const { pin_id } = result.data;
           if (!pin_id) throw new Error('Failed to get PIN ID from Termii');
           
-                   // Step 2: Store ALL signup data in sessionStorage
+          // Step 2: Store ALL signup data in sessionStorage
           const verifyData = {
             ...signupData,
             pinId: pin_id,           // From Termii
@@ -431,12 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
           sessionStorage.setItem('signupData', JSON.stringify(verifyData));
           console.log('Stored signup data, navigating to verify-otp...');
           
-        
-          
           // Step 3: Navigate to verify OTP page
-          console.log('About to redirect to verify-otp.html');
-debugger; // This will pause execution - check if it reaches here
-window.location.href = 'verify-otp.html';
+          window.location.href = 'verify-otp.html';
           
         } catch (error) {
           console.error('Signup error:', error);

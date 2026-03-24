@@ -22,22 +22,22 @@ self.addEventListener('message', (event) => {
 const CACHE_NAME = 'h3-chat-v5'; // Bumped from your v4
 
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/chat.html',
-  '/runs.html',
-  '/events.html',
-  '/songs.html',
-  '/trail.html',
-  '/personal.html',
-  '/business-hub.html',
-  '/login.html',
-  '/signup.html',
- // '/paywall.html',
-  '/css/base.css',
- '/icons/ic_chat.png',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  './',
+  './index.html',
+  './chat.html',
+  './runs.html',
+  './events.html',
+  './songs.html',
+  './trail.html',
+  './personal.html',
+  './business-hub.html',
+  './login.html',
+  './signup.html',
+ // './paywall.html',
+  './css/base.css',
+ './icons/ic_chat.png',
+  './icon-192x192.png',
+  './icon-512x512.png'
 ];
 
 // ==================== CORE SERVICE WORKER ====================
@@ -122,11 +122,11 @@ if (!isCapacitor) {
       // CRITICAL: These options enable sound and vibration
       const notificationOptions = {
         body: payload.notification?.body || 'You have a new message',
-        icon: '/icons/ic_chat.png',
-        badge: '/icons/ic_chat.png',
+        icon: './icons/ic_chat.png',
+        badge: './icons/ic_chat.png',
         tag: payload.data?.dmId || payload.data?.kennelId || 'chat-message',
         data: { 
-          url: payload.data?.url || '/chat.html',
+          url: payload.data?.url || './chat.html',
           dmId: payload.data?.dmId,
           kennelId: payload.data?.kennelId,
           type: payload.data?.type || 'dm'
@@ -177,7 +177,7 @@ self.addEventListener('notificationclick', event => {
   console.log('SW: Notification clicked', event);
   event.notification.close();
   
-  const url = event.notification.data?.url || '/chat.html';
+  const url = event.notification.data?.url || './chat.html';
   const dmId = event.notification.data?.dmId;
   const kennelId = event.notification.data?.kennelId;
   
@@ -223,8 +223,8 @@ self.addEventListener('push', event => {
     const title = payload.title || 'New Message';
     const options = {
       body: payload.body || 'You have a new message',
-      icon: '/icons/ic_chat.png',
-      badge: '/icons/ic_chat.png',
+      icon: './icons/ic_chat.png',
+      badge: './icons/ic_chat.png',
       tag: payload.tag || 'push-message',
       data: payload.data || {},
       silent: false,
@@ -240,7 +240,7 @@ self.addEventListener('push', event => {
     event.waitUntil(
       self.registration.showNotification('New Message', {
         body: event.data.text(),
-        icon: '/icons/ic_chat.png',
+        icon: './icons/ic_chat.png',
         silent: false,
         vibrate: [200, 100, 200]
       })

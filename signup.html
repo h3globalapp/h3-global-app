@@ -1,168 +1,452 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <title>H3 Global – Sign Up</title>
-  <!-- CRITICAL: Added viewport-fit=cover -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="/manifest.json">
-  
-  <!-- Android -->
-  <meta name="mobile-web-app-capable" content="yes">
-  
-  <!-- iOS PWA Support -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="H3 Global App">
-  <link rel="apple-touch-icon" href="/icon-192x192.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
-  
-  <!-- Theme Color -->
-  <meta name="theme-color" content="#FF6D00">
-  <meta name="background-color" content="#FFFFFF">
-  
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
-  
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/base.css"/>
-  <link rel="stylesheet" href="css/screens/signup.css"/>
-  
-  <!-- Service Worker Registration (BEFORE Firebase) -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        .then((reg) => console.log('SW registered:', reg.scope))
-        .catch((err) => console.log('SW registration failed:', err));
-    }
-  </script>
-  
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    
-    const firebaseConfig = {
-      apiKey: "AIzaSyBhhU-vo9qmMKETOdjgz24JrsRv-rojUBc",
-      authDomain: "h3-global-app.firebaseapp.com",
-      projectId: "h3-global-app",
-      storageBucket: "h3-global-app.firebasestorage.app",
-      messagingSenderId: "174897234240",
-      appId: "1:174897234240:web:74612994c432f410843aa5"
-    };
-    
-    const app = initializeApp(firebaseConfig);
-    window.db = getFirestore(app);
-    console.log("Firebase initialized!");
-  </script>
-</head>
-<body>
-<!-- Header -->
-<header class="signup-header">
-  <img src="icons/h3_logo.svg" alt="HHH Logo" class="signup-logo"/>
-  <h1>Sign Up</h1>
-</header>
+document.addEventListener('DOMContentLoaded', () => {
+  // Wait for Firebase to be ready
+  if (!window.db) {
+    console.error('Firebase not initialized!');
+    return;
+  }
 
-<!-- Scrollable form -->
-<main class="signup-scroll">
-  <form id="signupForm" class="signup-form">
-    <!-- Hash Handle -->
-    <div class="input-group">
-      <label for="etHashHandle">Hash Handle</label>
-      <input type="text" id="etHashHandle" placeholder="Hash Handle" required/>
-    </div>
+  // Import Firestore functions
+  import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
+    .then(({ collection, doc, getDocs, getDoc, addDoc, setDoc, Timestamp }) => {
+      
+      // DOM elements
+      const els = {
+        form: document.getElementById('signupForm'),
+        country: document.getElementById('actvCountry'),
+        state: document.getElementById('actvState'),
+        kennel: document.getElementById('actvKennel'),
+        designation: document.getElementById('actvDesignation'),
+        modal: document.getElementById('addKennelModal'),
+        btnSignup: document.getElementById('btnSignup')
+      };
 
-    <!-- First Name -->
-    <div class="input-group">
-      <label for="etFirstName">First Name (Given Name)</label>
-      <input type="text" id="etFirstName" placeholder="First Name" required/>
-    </div>
+      // Helper: Get collection reference
+      const getCol = (path) => collection(window.db, path);
+      const getDocRef = (path) => doc(window.db, path);
 
-    <!-- Last Name -->
-    <div class="input-group">
-      <label for="etLastName">Last Name (Surname)</label>
-      <input type="text" id="etLastName" placeholder="Last Name" required/>
-    </div>
+      // Load countries from Firestore
+      async function loadCountries() {
+        try {
+          console.log('Loading countries...');
+          const snap = await getDocs(getCol('locations'));
+          const countries = snap.docs.map(d => d.id).sort();
+          console.log('Countries loaded:', countries);
+          
+          countries.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            els.country.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error loading countries:', err);
+          alert('Failed to load countries. Check console.');
+        }
+      }
 
-    <!-- Phone with country code -->
-    <div class="phone-row">
-      <select id="countryCodePicker" class="country-select">
-        <option value="+234" data-flag="ng" selected>🇳🇬 +234</option>
-        <option value="+1" data-flag="us">🇺🇸 +1</option>
-        <option value="+44" data-flag="gb">🇬🇧 +44</option>
-        <option value="+61" data-flag="au">🇦🇺 +61</option>
-        <option value="+66" data-flag="th">🇹🇭 +66</option>
-      </select>
-      <div class="input-group phone-input">
-        <label for="etPhone">Phone</label>
-        <input type="tel" id="etPhone" placeholder="e.g. 8012345678" required/>
-      </div>
-    </div>
+      // Country selected → load states
+      els.country.addEventListener('change', async () => {
+        els.state.innerHTML = '<option value="" disabled selected>Select State</option>';
+        els.state.disabled = false;
+        els.kennel.innerHTML = '<option value="" disabled selected>Select Kennel</option>';
+        els.kennel.disabled = true;
+        els.designation.innerHTML = '<option value="" disabled selected>Select Designation</option>';
+        els.designation.disabled = true;
+        
+        try {
+          console.log('Loading states for:', els.country.value);
+          const snap = await getDocs(getCol(`locations/${els.country.value}/states`));
+          const states = snap.docs.map(d => d.id).sort();
+          console.log('States loaded:', states);
+          
+          states.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            els.state.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error loading states:', err);
+        }
+      });
 
-    <!-- Helper text -->
-    <p class="helper-text">Please select Country, State, Kennel and Designation from the drop down list only, Do not type them</p>
+      // State selected → load kennels
+      els.state.addEventListener('change', async () => {
+        els.kennel.innerHTML = '<option value="" disabled selected>Select Kennel</option>';
+        els.kennel.disabled = false;
+        els.designation.innerHTML = '<option value="" disabled selected>Select Designation</option>';
+        els.designation.disabled = true;
+        
+        try {
+          console.log('Loading kennels for:', els.country.value, els.state.value);
+          const snap = await getDocs(getCol(`locations/${els.country.value}/states/${els.state.value}/kennels`));
+          const kennels = snap.docs.map(d => d.id).sort();
+          kennels.push('(+ Add Kennel)');
+          console.log('Kennels loaded:', kennels);
+          
+          kennels.forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k;
+            opt.textContent = k;
+            els.kennel.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error loading kennels:', err);
+        }
+      });
 
-   <!-- Country -->
-<div class="input-group">
-  <label for="actvCountry">Select Kennel's Country</label>
-  <select id="actvCountry" required>
-    <option value="" disabled selected>Select Country</option>
-  </select>
-</div>
+      // Kennel selected
+      els.kennel.addEventListener('change', async () => {
+        if (els.kennel.value === '(+ Add Kennel)') {
+          els.modal.classList.remove('hidden');
+          els.kennel.value = '';
+          return;
+        }
+        
+        await loadDesignations();
+      });
 
-<!-- State -->
-<div class="input-group">
-  <label for="actvState">Select Kennel's State</label>
-  <select id="actvState" required disabled>
-    <option value="" disabled selected>Select State</option>
-  </select>
-</div>
+      // Load designations from Firestore
+      async function loadDesignations() {
+        els.designation.innerHTML = '<option value="" disabled selected>Select Designation</option>';
+        els.designation.disabled = false;
+        
+        try {
+          console.log('Loading designations for:', els.kennel.value);
+          
+          // Get role definitions
+          const roleDoc = await getDoc(getDocRef('role/roleid'));
+          const noTier = roleDoc.data()?.['No Tier'] || [];
+          const tier1 = roleDoc.data()?.['Tier 1'] || [];
+          const tier2 = roleDoc.data()?.['Tier 2'] || [];
+          
+          // Get taken designations
+          const kennelDoc = await getDoc(getDocRef(`designations/${els.kennel.value}`));
+          const taken = kennelDoc.exists() ? Object.keys(kennelDoc.data()) : [];
+          
+          // Check if Admin exists
+          const adminDoc = await getDoc(getDocRef('designations/Admin'));
+          const tier1Exists = adminDoc.exists();
+          
+          // Build available list
+          let allDesignations = [];
+          const gmHmBlock = ['Grand Master', 'Hash Master'];
+          const gmOrHmTaken = gmHmBlock.some(d => taken.includes(d));
+          
+          const availableTier1 = tier1.filter(d => !taken.includes(d));
+          const availableTier2 = tier2.filter(d => {
+            if (gmHmBlock.includes(d)) return !gmOrHmTaken;
+            return !taken.includes(d);
+          });
+          
+          if (!tier1Exists) allDesignations.push(...availableTier1);
+          allDesignations.push(...availableTier2);
+          allDesignations.push(...noTier);
+          
+          console.log('Designations loaded:', allDesignations);
+          
+          allDesignations.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            els.designation.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error loading designations:', err);
+          // Fallback
+          const defaults = ['Grand Master', 'Hash Master', 'Religious Adviser', 'On Sec', 'Hasher'];
+          defaults.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            els.designation.appendChild(opt);
+          });
+        }
+      }
 
-<!-- Helper text for kennel -->
-<p class="helper-text">Can't find your kennel? Select (+ Add Kennel) to add a new one.</p>
+      // Modal buttons
+      document.getElementById('btnCancelKennel').onclick = () => {
+        els.modal.classList.add('hidden');
+        document.getElementById('etPrefix').value = '';
+      };
 
-<!-- Kennel -->
-<div class="input-group">
-  <label for="actvKennel">Select Kennel</label>
-  <select id="actvKennel" required disabled>
-    <option value="" disabled selected>Select Kennel</option>
-  </select>
-</div>
+      document.getElementById('btnSubmitKennel').onclick = async () => {
+        const prefix = document.getElementById('etPrefix').value.trim();
+        if (!prefix) {
+          alert('Please enter a kennel name prefix');
+          return;
+        }
+        
+        const suffix = document.querySelector('input[name="suffix"]:checked').value;
+        const rawName = `${prefix} ${suffix}`;
+        
+        // Canonical name (matches Android logic)
+        const canonical = canonicalKennelName(rawName);
+        
+        // Add to dropdown
+        const opt = document.createElement('option');
+        opt.value = canonical;
+        opt.textContent = canonical;
+        els.kennel.insertBefore(opt, els.kennel.lastChild);
+        
+        els.kennel.value = canonical;
+        els.modal.classList.add('hidden');
+        document.getElementById('etPrefix').value = '';
+        
+              // Create kennel request and temp kennel (matches Android logic)
+        try {
+          const { addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+          
+          // Get phone number from form
+          const phone = document.getElementById('countryCodePicker').value + document.getElementById('etPhone').value.replace(/\D/g, '');
+          
+          // 1. Create kennelRequests document (matches Android queueOrCreateKennel)
+          const request = {
+            requesterUid: '',  // Will be empty during signup, filled later after OTP
+            requesterPhone: phone,  // ✅ ADD THIS - allows lookup before auth
+            country: els.country.value,
+            state: els.state.value,
+            requestedName: rawName,
+            canonicalName: canonical,
+            status: 'pending',
+            timestamp: Timestamp.now()
+          };
+          
+          const requestRef = await addDoc(collection(window.db, 'kennelRequests'), request);
+          console.log('Kennel request created:', requestRef.id, request);
+          
+          // 2. Create TEMP kennel doc (matches Android tempKennelName logic)
+          // Generate temp ID like Android: "PENDING-" + hashCode base36
+          const tempId = this.tempKennelName(canonical);
+          const tempRef = doc(window.db, `locations/${els.country.value}/states/${els.state.value}/kennels/${tempId}`);
+          await setDoc(tempRef, {
+            createdAt: Timestamp.now(),
+            status: 'pending',
+            requestedName: rawName,
+            requesterPhone: phone,  // Also store here for reference
+            originalRequestId: requestRef.id
+          });
+          console.log('Temp kennel created:', tempId);
+          
+          // Store temp kennel name for later use
+          els.kennel.dataset.tempId = tempId;
+          
+        } catch (err) {
+          console.error('Error creating kennel request:', err);
+        }
+        
+        await loadDesignations();
+      };
 
-<!-- Designation -->
-<div class="input-group">
-  <label for="actvDesignation">Designation</label>
-  <select id="actvDesignation" required disabled>
-    <option value="" disabled selected>Select Designation</option>
-  </select>
-</div>
+           // Canonical name helper (matches Android)
+      function canonicalKennelName(raw) {
+        let s = raw.trim().toLowerCase();
+        s = s.replace(/\bh3\b/g, 'hash');
+        s = s.replace(/\bhash3\b/g, 'hash');
+        s = s.replace(/\bhhh\b/g, 'hash');
+        s = s.replace(/\bhash\s+house\s+harriers\b/g, '');
+        s = s.replace(/\s+/g, ' ').trim();
+        const prefix = s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        return `${prefix} Hash House Harriers`;
+      }
 
-    <!-- Submit -->
-    <button type="submit" id="btnSignup" class="signup-btn">CREATE ACCOUNT</button>
-  </form>
-</main>
+      // Temp kennel name generator (matches Android exactly)
+      function tempKennelName(requested) {
+        // Java's hashCode algorithm ported to JavaScript
+        let hash = 0;
+        for (let i = 0; i < requested.length; i++) {
+          const char = requested.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32bit integer
+        }
+        // Convert to unsigned and then to base 36
+        const unsignedHash = hash >>> 0;
+        const base36 = unsignedHash.toString(36).toUpperCase();
+        return `PENDING-${base36}`;
+      }
 
-<!-- Add Kennel Modal (hidden) -->
-<div id="addKennelModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Add New Kennel</h3>
-    <div class="input-group">
-      <label for="etPrefix">Kennel Name Prefix</label>
-      <input type="text" id="etPrefix" placeholder="e.g. Bangkok"/>
-    </div>
-    <div class="radio-group">
-      <label><input type="radio" name="suffix" value="Hash House Harriers" checked/> Hash House Harriers</label>
-      <label><input type="radio" name="suffix" value="Hash House Harriet"/> Hash House Harriet</label>
-    </div>
-    <div class="modal-actions">
-      <button type="button" id="btnCancelKennel" class="btn-secondary">Cancel</button>
-      <button type="button" id="btnSubmitKennel" class="btn-primary">Submit</button>
-    </div>
-  </div>
-</div>
+      // Form submit - ALL users use Termii
+      els.form.onsubmit = async (e) => {
+        e.preventDefault();
+		// ADD THIS LOG - Line ~200
+  console.log('1. Form submitted - starting signup flow');
+        els.btnSignup.disabled = true;
+        els.btnSignup.textContent = 'Sending OTP...';
+        
+        // Collect all data
+        const signupData = {
+          hashHandle: document.getElementById('etHashHandle').value.trim(),
+          firstName: document.getElementById('etFirstName').value.trim(),
+          lastName: document.getElementById('etLastName').value.trim(),
+          phone: document.getElementById('countryCodePicker').value + document.getElementById('etPhone').value.replace(/\D/g, ''),
+          country: els.country.value,
+          state: els.state.value,
+          kennel: els.kennel.value,
+          designation: els.designation.value
+        };
+		
+		  // ADD THIS LOG - Line ~215
+  console.log('2. Phone number collected:', signupData.phone);
+        
+               // Validate
+        if (!signupData.hashHandle || !signupData.firstName || !signupData.lastName || 
+            !signupData.phone || !signupData.country || !signupData.state || 
+            !signupData.kennel || !signupData.designation) {
+          alert('Please fill all fields');
+          els.btnSignup.disabled = false;
+          els.btnSignup.textContent = 'CREATE ACCOUNT';
+          return;
+        }
+		  // ADD THIS LOG - Line ~227
+  console.log('3. All fields valid, checking if phone exists...');
+        
+              // Check if phone number already exists
+        try {
+          const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+          const phoneRef = doc(window.db, 'phoneNumbers', signupData.phone);
+          const phoneDoc = await getDoc(phoneRef);
+          
+          if (phoneDoc.exists()) {
+            // Show custom dialog with Login Instead button
+            const existingUserDialog = document.createElement('div');
+            existingUserDialog.style.cssText = `
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0,0,0,0.6);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 10000;
+              font-family: sans-serif;
+            `;
+            
+            existingUserDialog.innerHTML = `
+              <div style="
+                background: white;
+                width: 90%;
+                max-width: 400px;
+                border-radius: 16px;
+                padding: 24px;
+                text-align: center;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+              ">
+                <div style="font-size: 48px; margin-bottom: 16px;">📱</div>
+                <h2 style="margin: 0 0 12px 0; font-size: 20px; color: #333;">Already Registered</h2>
+                <p style="margin: 0 0 24px 0; color: #666; line-height: 1.5;">
+                  This phone number is already registered. Would you like to login instead?
+                </p>
+                <div style="display: flex; gap: 12px;">
+                  <button id="btnStaySignup" style="
+                    flex: 1;
+                    padding: 12px;
+                    border: 1px solid #ddd;
+                    background: white;
+                    color: #666;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                  ">Stay Here</button>
+                  <button id="btnGoLogin" style="
+                    flex: 1;
+                    padding: 12px;
+                    border: none;
+                    background: #FF6D00;
+                    color: white;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                  ">Login Instead</button>
+                </div>
+              </div>
+            `;
+            
+            document.body.appendChild(existingUserDialog);
+            
+            // Button handlers
+            existingUserDialog.querySelector('#btnStaySignup').onclick = () => {
+              existingUserDialog.remove();
+              els.btnSignup.disabled = false;
+              els.btnSignup.textContent = 'CREATE ACCOUNT';
+              // Clear phone field so they can try different number
+              document.getElementById('etPhone').value = '';
+              document.getElementById('etPhone').focus();
+            };
+            
+            existingUserDialog.querySelector('#btnGoLogin').onclick = () => {
+              // Store phone for login page to pre-fill
+              sessionStorage.setItem('pendingLoginPhone', signupData.phone);
+              window.location.href = 'login.html';
+            };
+            
+            // Close on overlay click
+            existingUserDialog.onclick = (e) => {
+              if (e.target === existingUserDialog) {
+                existingUserDialog.remove();
+                els.btnSignup.disabled = false;
+                els.btnSignup.textContent = 'CREATE ACCOUNT';
+              }
+            };
+            
+            return;
+          }
+        } catch (err) {
+          console.error('Error checking phone:', err);
+          // Continue anyway - let verify-otp catch it
+        }
+        
+        try {
+          // Import Firebase Functions
+          const { httpsCallable } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js");
+          const { functions } = await import('../firebase-config.js');
+          
+          // Step 1: Send OTP via Termii (ALL users)
+          const sendOtpTermii = httpsCallable(functions, 'sendOtpTermii');
+          const result = await sendOtpTermii({
+            phone: signupData.phone,
+            firstName: signupData.firstName,
+            lastName: signupData.lastName
+          });
+          
+          const { pin_id } = result.data;
+          if (!pin_id) throw new Error('Failed to get PIN ID from Termii');
+          
+                   // Step 2: Store ALL signup data in sessionStorage
+          const verifyData = {
+            ...signupData,
+            pinId: pin_id,           // From Termii
+            isFirebase: false,       // ALL users use Termii
+            isSignup: true,          // Flag to know this is signup not login
+            otpSentAt: Date.now()    // Timestamp to prevent stale data
+          };
+          
+          // Clear any old data first to prevent conflicts
+          sessionStorage.removeItem('signupData');
+          sessionStorage.removeItem('loginData');
+          
+          // Store new data
+          sessionStorage.setItem('signupData', JSON.stringify(verifyData));
+          console.log('Stored signup data, navigating to verify-otp...');
+          
+        
+          
+          // Step 3: Navigate to verify OTP page
+          console.log('About to redirect to verify-otp.html');
+debugger; // This will pause execution - check if it reaches here
+window.location.href = 'verify-otp.html';
+          
+        } catch (error) {
+          console.error('Signup error:', error);
+          alert('Failed to send OTP: ' + error.message);
+          els.btnSignup.disabled = false;
+          els.btnSignup.textContent = 'CREATE ACCOUNT';
+        }
+      };
 
-<script src="js/screens/signup.js" type="module"></script>
-</body>
-</html>
+      // Initialize
+      loadCountries();
+    });
+});

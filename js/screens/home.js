@@ -4977,114 +4977,99 @@ async requestGeolocationPermission() {
       font-family: sans-serif;
     `;
     
-    overlay.innerHTML = `
-      <div class="kennel-wallet-dialog">
-        <div style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 20px;
-          border-bottom: 1px solid #e0e0e0;
-          background: #FF6D00;
-        ">
-          <h2 style="margin: 0; font-size: 18px; color: white;">${kennelName} Wallet</h2>
-          <button id="close-kennel-wallet" style="
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: white;
-          ">×</button>
+   overlay.innerHTML = `
+  <div class="kennel-wallet-dialog">
+    <div style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e0e0e0;
+      background: #FF6D00;
+    ">
+      <h2 style="margin: 0; font-size: 18px; color: white;">${kennelName} Wallet</h2>
+      <button id="close-kennel-wallet" style="
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: white;
+      ">×</button>
+    </div>
+    
+    <!-- WRAP middle content in scrollable container -->
+    <div class="dialog-content">
+      <div class="wallet-breakdown">
+        <div class="wallet-item" data-type="accommodation">
+          <div class="wallet-name">
+            <input type="checkbox" class="wallet-checkbox" id="chk-accommodation" ${breakdown.accommodation > 0 ? '' : 'disabled'}>
+            🏨 Accommodation
+          </div>
+          <div class="wallet-amount">₦${breakdown.accommodation.toLocaleString()}</div>
         </div>
         
-        <div class="wallet-breakdown">
-          <div class="wallet-item" data-type="accommodation">
-            <div class="wallet-name">
-              <input type="checkbox" class="wallet-checkbox" id="chk-accommodation" ${breakdown.accommodation > 0 ? '' : 'disabled'}>
-              🏨 Accommodation
-            </div>
-            <div class="wallet-amount">₦${breakdown.accommodation.toLocaleString()}</div>
+        <div class="wallet-item" data-type="rego">
+          <div class="wallet-name">
+            <input type="checkbox" class="wallet-checkbox" id="chk-rego" ${breakdown.rego > 0 ? '' : 'disabled'}>
+            🏃 Rego
           </div>
-          
-          <div class="wallet-item" data-type="rego">
-            <div class="wallet-name">
-              <input type="checkbox" class="wallet-checkbox" id="chk-rego" ${breakdown.rego > 0 ? '' : 'disabled'}>
-              🏃 Rego
-            </div>
-            <div class="wallet-amount">₦${breakdown.rego.toLocaleString()}</div>
-          </div>
-          
-          <div class="wallet-item" data-type="sponsorship">
-            <div class="wallet-name">
-              <input type="checkbox" class="wallet-checkbox" id="chk-sponsorship" ${breakdown.sponsorship > 0 ? '' : 'disabled'}>
-              🤝 Sponsorship
-            </div>
-            <div class="wallet-amount">₦${breakdown.sponsorship.toLocaleString()}</div>
-          </div>
+          <div class="wallet-amount">₦${breakdown.rego.toLocaleString()}</div>
         </div>
         
-        <div class="grand-total">
-          <div class="grand-total-label">Total Available</div>
-          <div class="grand-total-amount">₦${total.toLocaleString()}</div>
-        </div>
-        
-        <div class="withdraw-section">
-          <div class="withdraw-toggle">
-            <button id="btn-withdraw-all" class="active">Withdraw All</button>
-            <button id="btn-withdraw-select">Select Wallets</button>
+        <div class="wallet-item" data-type="sponsorship">
+          <div class="wallet-name">
+            <input type="checkbox" class="wallet-checkbox" id="chk-sponsorship" ${breakdown.sponsorship > 0 ? '' : 'disabled'}>
+            🤝 Sponsorship
           </div>
-          
-          <div class="bank-form">
-            <div class="form-group">
-              <label>Bank Name</label>
-              <select id="withdraw-bank">
-                <option value="">Select Bank</option>
-                <option value="044">Access Bank</option>
-                <option value="023">Citibank</option>
-                <option value="050">Ecobank</option>
-                <option value="011">First Bank</option>
-                <option value="214">First City Monument Bank</option>
-                <option value="070">Fidelity Bank</option>
-                <option value="058">Guaranty Trust Bank</option>
-                <option value="030">Heritage Bank</option>
-                <option value="301">Jaiz Bank</option>
-                <option value="082">Keystone Bank</option>
-                <option value="076">Polaris Bank</option>
-                <option value="101">Providus Bank</option>
-                <option value="221">Stanbic IBTC</option>
-                <option value="068">Standard Chartered</option>
-                <option value="232">Sterling Bank</option>
-                <option value="100">SunTrust Bank</option>
-                <option value="032">Union Bank</option>
-                <option value="033">United Bank for Africa</option>
-                <option value="215">Unity Bank</option>
-                <option value="035">Wema Bank</option>
-                <option value="057">Zenith Bank</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label>Account Number</label>
-              <input type="text" id="withdraw-account" placeholder="10 digit account number" maxlength="10">
-            </div>
-            
-            <div class="form-group">
-              <label>Account Holder Name</label>
-              <input type="text" id="withdraw-holder" placeholder="Name on account">
-            </div>
-            
-            <div class="form-group">
-              <label>Amount to Withdraw (₦)</label>
-              <input type="number" id="withdraw-amount" class="amount-input" placeholder="0" min="100" max="${Math.min(total, 1000000)}">
-            </div>
-            
-            <div class="error-message" id="withdraw-error"></div>
-            
-            <button id="btn-submit-withdraw" class="withdraw-btn" disabled>Withdraw Funds</button>
-          </div>
+          <div class="wallet-amount">₦${breakdown.sponsorship.toLocaleString()}</div>
         </div>
       </div>
-    `;
+      
+      <div class="grand-total">
+        <div class="grand-total-label">Total Available</div>
+        <div class="grand-total-amount">₦${total.toLocaleString()}</div>
+      </div>
+    </div>
+    
+    <div class="withdraw-section">
+      <div class="withdraw-toggle">
+        <button id="btn-withdraw-all" class="active">Withdraw All</button>
+        <button id="btn-withdraw-select">Select Wallets</button>
+      </div>
+      
+      <div class="bank-form">
+        <div class="form-group">
+          <label>Bank Name</label>
+          <select id="withdraw-bank">
+            <option value="">Select Bank</option>
+            <option value="044">Access Bank</option>
+            <!-- ... rest of banks ... -->
+            <option value="057">Zenith Bank</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Account Number</label>
+          <input type="text" id="withdraw-account" placeholder="10 digit account number" maxlength="10">
+        </div>
+        
+        <div class="form-group">
+          <label>Account Holder Name</label>
+          <input type="text" id="withdraw-holder" placeholder="Name on account">
+        </div>
+        
+        <div class="form-group">
+          <label>Amount to Withdraw (₦)</label>
+          <input type="number" id="withdraw-amount" class="amount-input" placeholder="0" min="100" max="${Math.min(total, 1000000)}">
+        </div>
+        
+        <div class="error-message" id="withdraw-error"></div>
+        
+        <button id="btn-submit-withdraw" class="withdraw-btn" disabled>Withdraw Funds</button>
+      </div>
+    </div>
+  </div>
+`;
     
     document.body.appendChild(overlay);
     
@@ -5120,6 +5105,7 @@ async requestGeolocationPermission() {
       withdrawMode = 'select';
       btnWithdrawSelect.classList.add('active');
       btnWithdrawAll.classList.remove('active');
+		  selectedWallets = []; // ADD THIS LINE
       
       // Uncheck all
       overlay.querySelectorAll('.wallet-checkbox').forEach(chk => {

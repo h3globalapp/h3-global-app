@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // 2. Create TEMP kennel doc (matches Android tempKennelName logic)
           // Generate temp ID like Android: "PENDING-" + hashCode base36
-          const tempId = this.tempKennelName(canonical);
+          const tempId = tempKennelName(canonical);
           const tempRef = doc(window.db, `locations/${els.country.value}/states/${els.state.value}/kennels/${tempId}`);
           await setDoc(tempRef, {
             createdAt: Timestamp.now(),

@@ -52,44 +52,45 @@ class VerifyOtpManager {
     document.getElementById('btnResend').addEventListener('click', () => this.resendOtp());
   }
 
-  async verifyOtp() {
-    const otp = document.getElementById('etOtp').value.trim();
-    if (otp.length !== 6) {
-      alert("Enter 6-digit OTP code");
+ async verifyOtp() {
+  const otp = document.getElementById('etOtp').value.trim();
+  if (otp.length !== 6) {
+    alert("Enter 6-digit OTP code");
+    return;
+  }
+  
+  const btn = document.getElementById('btnVerify');
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+  
+  try {
+    const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
+    const result = await verifyOtpHybrid({
+      phone: this.data.phone,
+      pinId: this.data.pinId,
+      pin: otp
+    });
+    
+    const { token, isExistingUser } = result.data;
+    if (!token) throw new Error("No authentication token received");
+    
+    // Step 1: Sign in to Firebase Auth
+    await signInWithCustomToken(auth, token);
+    
+    // Step 2: If signup, create user record + wallet
+    if (this.data.isSignup) {
+      await this.createUserRecord();
+      // createUserRecord handles its own redirect on success
       return;
     }
     
-    const btn = document.getElementById('btnVerify');
-    btn.disabled = true;
-    btn.textContent = 'Verifying...';
-    
-    try {
-      const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
-      const result = await verifyOtpHybrid({
-        phone: this.data.phone,
-        pinId: this.data.pinId,
-        pin: otp
-      });
-      
-      const { token, isExistingUser } = result.data;
-      if (!token) throw new Error("No authentication token received");
-      
-      // Step 1: Sign in to Firebase Auth
-      await signInWithCustomToken(auth, token);
-      
-      // Step 2: If signup, create user record + wallet
-      try {
-    // ... verify OTP ...
-    
-    if (this.data.isSignup) {
-      await this.createUserRecord();
-      return; // Add explicit return
-    }
+    // Login flow - redirect to home
     window.location.href = 'index.html';
+    
   } catch (error) {
-    console.error("Full error details:", error); // Log full error
+    console.error("Full error details:", error);
     alert(error.message);
-    // Don't redirect back to signup - let user retry OTP
+    // Stay on page, let user retry
     btn.disabled = false;
     btn.textContent = 'VERIFY';
   }

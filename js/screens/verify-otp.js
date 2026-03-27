@@ -128,10 +128,18 @@ class VerifyOtpManager {
   }
 
 async createUserRecord() {
+  console.log('=== CREATE USER RECORD START ===');
+  
   const user = auth.currentUser;
-  if (!user) throw new Error("Authentication failed - no user");
+  console.log('Current user:', user?.uid);
+  
+  if (!user) {
+    console.error('No current user!');
+    throw new Error("Authentication failed - no user");
+  }
   
   const uid = user.uid;
+  console.log('UID:', uid);
   
   // Create fake email from phone
   let cleanPhone = this.data.phone.replace(/\D/g, '');
@@ -141,9 +149,13 @@ async createUserRecord() {
     cleanPhone = cleanPhone.substring(1);
   }
   const fakeEmail = `user${cleanPhone}@h3global.app`;
+  console.log('Fake email:', fakeEmail);
   
   const userRef = doc(db, "users", uid);
   const phoneRef = doc(db, "phoneNumbers", this.data.phone);
+  
+  console.log('userRef path:', userRef.path);
+  console.log('phoneRef path:', phoneRef.path);
   
   const userMap = {
     hashHandle: this.data.hashHandle,
@@ -158,8 +170,10 @@ async createUserRecord() {
     designation: this.data.designation,
     createdWith: "termii",
     createdAt: serverTimestamp(),
-    walletPending: true  // Flag to show dialog on home page
+    walletPending: true
   };
+  
+  console.log('User map:', userMap);
   
   if (this.data.designation === "Admin") {
     userMap.role = "Tier 1";
@@ -167,68 +181,97 @@ async createUserRecord() {
     userMap.role = "Tier 2";
   }
   
+  console.log('Starting transaction...');
+  
   try {
     await runTransaction(db, async (transaction) => {
+      console.log('Inside transaction, checking phone...');
       const phoneDoc = await transaction.get(phoneRef);
+      console.log('Phone doc exists:', phoneDoc.exists());
+      
       if (phoneDoc.exists()) {
+        console.error('Phone already used!');
         throw new Error("PHONE_ALREADY_USED");
       }
       
+      console.log('Setting phone ref...');
       transaction.set(phoneRef, { createdAt: serverTimestamp() });
+      
+      console.log('Setting user ref...');
       transaction.set(userRef, userMap);
       
-      // Don't save "Hasher" to designations
       const noTierRoles = ['Hasher', 'Member', 'Visitor'];
       if (!noTierRoles.includes(this.data.designation)) {
         const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
+        console.log('Designation path:', designationPath);
         const designationRef = doc(db, "designations", designationPath);
+        console.log('designationRef path:', designationRef.path);
         transaction.set(designationRef, {
           [this.data.designation]: this.data.phone
         }, { merge: true });
       }
+      
+      console.log('Transaction operations queued');
     });
     
-       // After user creation, update kennelRequests with the actual UID (if user requested new kennel)
-    try {
-      const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-      
-      // Find pending kennel requests by this phone number
-      const requestsQuery = query(
-        collection(db, 'kennelRequests'),
-        where('requesterPhone', '==', this.data.phone),
-        where('status', '==', 'pending')
-      );
-      const requestSnaps = await getDocs(requestsQuery);
-      
-      for (const requestDoc of requestSnaps.docs) {
-        // Update with actual UID
-        await updateDoc(requestDoc.ref, {
-          requesterUid: uid,
-          requesterHandle: this.data.hashHandle
-        });
-        console.log('Updated kennel request with UID:', requestDoc.id);
-        
-        // Also update temp kennel doc
-        const requestData = requestDoc.data();
-        if (requestData.canonicalName) {
-          const tempId = tempKennelName(requestData.canonicalName);
-          const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
-          await updateDoc(tempRef, {
-            requesterUid: uid,
-            requesterHandle: this.data.hashHandle
-          }).catch(e => console.log('Temp kennel may not exist:', e));
-        }
-      }
-    } catch (err) {
-      console.error('Error updating kennel requests with UID:', err);
-      // Don't block signup if this fails
-    }
-    
-    sessionStorage.removeItem('signupData');
-    alert("Signup successful! Welcome to H3 Global.");
-    window.location.href = 'index.html';
+    console.log('Transaction committed successfully!');
     
   } catch (error) {
+    console.error('Transaction failed:', error);
+    if (error.message === "PHONE_ALREADY_USED") {
+      throw new Error("This phone number is already registered. Please login instead.");
+    }
+    throw error;
+  }
+  
+  console.log('Starting kennel request update...');
+  
+  try {
+    console.log('Importing firestore modules...');
+    const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+    console.log('Firestore modules imported');
+    
+    const requestsQuery = query(
+      collection(db, 'kennelRequests'),
+      where('requesterPhone', '==', this.data.phone),
+      where('status', '==', 'pending')
+    );
+    console.log('Query created');
+    
+    const requestSnaps = await getDocs(requestsQuery);
+    console.log('Query result count:', requestSnaps.size);
+    
+    for (const requestDoc of requestSnaps.docs) {
+      console.log('Updating request:', requestDoc.id);
+      await updateDoc(requestDoc.ref, {
+        requesterUid: uid,
+        requesterHandle: this.data.hashHandle
+      });
+      
+      const requestData = requestDoc.data();
+      if (requestData.canonicalName) {
+        const tempId = this.tempKennelName(requestData.canonicalName);
+        console.log('Temp kennel ID:', tempId);
+        const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
+        console.log('Temp ref path:', tempRef.path);
+        await updateDoc(tempRef, {
+          requesterUid: uid,
+          requesterHandle: this.data.hashHandle
+        }).catch(e => console.log('Temp kennel may not exist:', e));
+      }
+    }
+    console.log('Kennel request update done');
+  } catch (err) {
+    console.error('Kennel request update error:', err);
+    console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
+  }
+  
+  console.log('Removing session data and redirecting...');
+  sessionStorage.removeItem('signupData');
+  alert("Signup successful! Welcome to H3 Global.");
+  window.location.href = 'index.html';
+} catch (error) {
     if (error.message === "PHONE_ALREADY_USED") {
       throw new Error("This phone number is already registered. Please login instead.");
     }

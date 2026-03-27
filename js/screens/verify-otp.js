@@ -132,6 +132,7 @@ async createUserRecord() {
     userMap.role = "Tier 2";
   }
   
+  // STEP 1: Create user in transaction (CRITICAL - must succeed)
   try {
     await runTransaction(db, async (transaction) => {
       const phoneDoc = await transaction.get(phoneRef);
@@ -151,21 +152,16 @@ async createUserRecord() {
         }, { merge: true });
       }
     });
-    
-    // MOVED OUTSIDE: Update kennel requests AFTER successful transaction
-    // Use a separate try-catch so it doesn't break the main flow
-    
   } catch (error) {
     if (error.message === "PHONE_ALREADY_USED") {
       throw new Error("This phone number is already registered. Please login instead.");
     }
-    console.error("Transaction failed:", error);
-    throw new Error("Failed to create user account. Please try again.");
+    throw error; // Re-throw other errors
   }
   
-  // Separate try-catch for kennel request updates (non-critical)
+  // STEP 2: Update kennel requests (NOT critical - can fail silently)
   try {
-    // FIX: Remove trailing space in URL
+    // FIX #1: Removed trailing space
     const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     
     const requestsQuery = query(
@@ -180,11 +176,11 @@ async createUserRecord() {
         requesterUid: uid,
         requesterHandle: this.data.hashHandle
       });
-      console.log('Updated kennel request with UID:', requestDoc.id);
       
       const requestData = requestDoc.data();
       if (requestData.canonicalName) {
-        const tempId = tempKennelName(requestData.canonicalName); // FIX: Use global function
+        // FIX #2: Removed "this." - it's a standalone function
+        const tempId = tempKennelName(requestData.canonicalName);
         const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
         await updateDoc(tempRef, {
           requesterUid: uid,
@@ -193,14 +189,16 @@ async createUserRecord() {
       }
     }
   } catch (err) {
-    console.error('Error updating kennel requests with UID:', err);
-    // Don't block signup if this fails - just log it
+    // Only log - don't throw, don't block signup
+    console.error('Non-critical: kennel request update failed:', err);
   }
   
+  // STEP 3: Only redirect after everything succeeds
   sessionStorage.removeItem('signupData');
   alert("Signup successful! Welcome to H3 Global.");
   window.location.href = 'index.html';
-} catch (error) {
+}
+  catch (error) {
     if (error.message === "PHONE_ALREADY_USED") {
       throw new Error("This phone number is already registered. Please login instead.");
     }

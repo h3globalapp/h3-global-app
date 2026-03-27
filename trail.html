@@ -130,9 +130,10 @@
     };
   </script>
   
-  <!-- Load Google Maps API -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsY_c16HNeFgfvDIuVhpICAfFX8evggYI&libraries=geometry&callback=initMap" async defer></script>
-  </script>
+<!-- Google Maps API with async loading -->
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsY_c16HNeFgfvDIuVhpICAfFX8evggYI&libraries=geometry&callback=initMap&loading=async">
+</script>
   <!-- Badge Service - Add in <head> of every page -->
 <script type="module">
   import badgeService from './js/screens/badge-service.js';

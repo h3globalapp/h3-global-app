@@ -5040,12 +5040,41 @@ async requestGeolocationPermission() {
       <div class="bank-form">
         <div class="form-group">
           <label>Bank Name</label>
-          <select id="withdraw-bank">
-            <option value="">Select Bank</option>
-            <option value="044">Access Bank</option>
-            <!-- ... rest of banks ... -->
-            <option value="057">Zenith Bank</option>
-          </select>
+        <select id="withdraw-bank">
+  <option value="">Select Bank</option>
+  <option value="044">Access Bank</option>
+  <option value="023">Citibank Nigeria</option>
+  <option value="050">Ecobank Nigeria</option>
+  <option value="070">Fidelity Bank</option>
+  <option value="011">First Bank of Nigeria</option>
+  <option value="214">First City Monument Bank (FCMB)</option>
+  <option value="058">Guaranty Trust Bank (GTB)</option>
+  <option value="030">Heritage Bank</option>
+  <option value="301">Jaiz Bank</option>
+  <option value="082">Keystone Bank</option>
+  <option value="101">Providus Bank</option>
+  <option value="076">Polaris Bank</option>
+  <option value="221">Stanbic IBTC Bank</option>
+  <option value="068">Standard Chartered Bank</option>
+  <option value="232">Sterling Bank</option>
+  <option value="100">SunTrust Bank</option>
+  <option value="032">Union Bank of Nigeria</option>
+  <option value="033">United Bank for Africa (UBA)</option>
+  <option value="215">Unity Bank</option>
+  <option value="035">Wema Bank</option>
+  <option value="057">Zenith Bank</option>
+  <!-- Fintech/Mobile Money -->
+  <option value="120">9 Payment Service Bank (9PSB)</option>
+  <option value="999991">Kuda Bank</option>
+  <option value="999992">Opay</option>
+  <option value="999993">Palmpay</option>
+  <option value="999994">Moniepoint</option>
+  <option value="999995">Paga</option>
+  <option value="999996">Carbon</option>
+  <option value="999997">FairMoney</option>
+  <option value="999998">Branch</option>
+  <option value="999999">Bamboo</option>
+</select>
         </div>
         
         <div class="form-group">

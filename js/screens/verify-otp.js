@@ -53,26 +53,61 @@ class VerifyOtpManager {
   }
 
   async verifyOtp() {
-    const otp = document.getElementById('etOtp').value.trim();
-    if (otp.length !== 6) {
-      alert("Enter 6-digit OTP code");
-      return;
+  const otp = document.getElementById('etOtp').value.trim();
+  if (otp.length !== 6) {
+    alert("Enter 6-digit OTP code");
+    return;
+  }
+  
+  const btn = document.getElementById('btnVerify');
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+  
+  console.log('=== VERIFY OTP START ===');
+  console.log('Phone:', this.data.phone);
+  console.log('isSignup:', this.data.isSignup);
+  
+  try {
+    console.log('Calling verifyOtpHybrid...');
+    const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
+    const result = await verifyOtpHybrid({
+      phone: this.data.phone,
+      pinId: this.data.pinId,
+      pin: otp
+    });
+    
+    console.log('verifyOtpHybrid result:', result.data);
+    const { token, isExistingUser } = result.data;
+    
+    if (!token) {
+      console.error('No token received');
+      throw new Error("No authentication token received");
     }
     
-    const btn = document.getElementById('btnVerify');
-    btn.disabled = true;
-    btn.textContent = 'Verifying...';
+    console.log('Signing in with custom token...');
+    await signInWithCustomToken(auth, token);
+    console.log('Signed in successfully, UID:', auth.currentUser?.uid);
     
-    try {
-      const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
-      const result = await verifyOtpHybrid({
-        phone: this.data.phone,
-        pinId: this.data.pinId,
-        pin: otp
-      });
-      
-      const { token, isExistingUser } = result.data;
-      if (!token) throw new Error("No authentication token received");
+    if (this.data.isSignup) {
+      console.log('Starting createUserRecord...');
+      await this.createUserRecord();
+      console.log('createUserRecord completed');
+    } else {
+      console.log('Not signup, redirecting...');
+      window.location.href = 'index.html';
+    }
+    
+  } catch (error) {
+    console.error("=== VERIFY OTP ERROR ===");
+    console.error("Error object:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    console.error("Error code:", error.code);
+    alert(error.message);
+    btn.disabled = false;
+    btn.textContent = 'VERIFY';
+  }
+}
       
       // Step 1: Sign in to Firebase Auth
       await signInWithCustomToken(auth, token);

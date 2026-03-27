@@ -132,3 +132,32 @@ input[type="number"] {
 .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
 .btn-secondary{padding:12px 24px;border-radius:8px;background:#f5f5f5}
 .btn-primary{padding:12px 24px;border-radius:8px;background:var(--clr-primary);color:#fff}
+
+/* Login link styling */
+.login-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.login-link span {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.btn-login {
+  display: inline-block;
+  padding: 10px 24px;
+  border: 2px solid #FF6D00;
+  border-radius: 8px;
+  color: #FF6D00;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-login:hover {
+  background: #FF6D00;
+  color: white;
+}

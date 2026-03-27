@@ -82,11 +82,24 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // SKIP Firebase/Firestore/Google requests - let browser handle natively
+  if (url.hostname.includes('firebase') || 
+      url.hostname.includes('googleapis') ||
+      url.hostname.includes('google')) {
+    return; // Don't intercept at all
+  }
+  
+  // Handle all other requests
   event.respondWith(
     caches.match(event.request)
       .then(response => {
         if (response) return response;
-        return fetch(event.request);
+        return fetch(event.request).catch(err => {
+          console.log('SW fetch failed:', event.request.url, err);
+          throw err;
+        });
       })
   );
 });

@@ -1188,7 +1188,8 @@
   cursor: pointer;
 }
 
-/* Kennel Wallet Dialog - Scrollable */
+/* Replace existing .kennel-wallet-dialog styles with: */
+
 .kennel-wallet-dialog {
   background: white;
   width: 90%;
@@ -1209,10 +1210,7 @@
 }
 
 /* Or simpler - make entire dialog scroll */
-.kennel-wallet-dialog {
-  overflow-y: auto;
-  max-height: 85vh;
-}
+
 
 /* Add this new class for the scrollable content */
 .kennel-wallet-dialog .dialog-content {
@@ -1294,6 +1292,7 @@
 
 .withdraw-section {
   padding: 0 20px 20px;
+  flex-shrink: 0; /* Prevent form from shrinking */
 }
 
 .withdraw-toggle {

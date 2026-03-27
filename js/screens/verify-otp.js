@@ -52,49 +52,45 @@ class VerifyOtpManager {
     document.getElementById('btnResend').addEventListener('click', () => this.resendOtp());
   }
 
- async verifyOtp() {
-  const otp = document.getElementById('etOtp').value.trim();
-  if (otp.length !== 6) {
-    alert("Enter 6-digit OTP code");
-    return;
-  }
-  
-  const btn = document.getElementById('btnVerify');
-  btn.disabled = true;
-  btn.textContent = 'Verifying...';
-  
-  try {
-    const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
-    const result = await verifyOtpHybrid({
-      phone: this.data.phone,
-      pinId: this.data.pinId,
-      pin: otp
-    });
-    
-    const { token, isExistingUser } = result.data;
-    if (!token) throw new Error("No authentication token received");
-    
-    // Step 1: Sign in to Firebase Auth
-    await signInWithCustomToken(auth, token);
-    
-    // Step 2: If signup, create user record + wallet
-    if (this.data.isSignup) {
-      await this.createUserRecord();
-      // createUserRecord handles its own redirect on success
+  async verifyOtp() {
+    const otp = document.getElementById('etOtp').value.trim();
+    if (otp.length !== 6) {
+      alert("Enter 6-digit OTP code");
       return;
     }
     
-    // Login flow - redirect to home
-    window.location.href = 'index.html';
+    const btn = document.getElementById('btnVerify');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
     
-  } catch (error) {
-    console.error("Full error details:", error);
-    alert(error.message);
-    // Stay on page, let user retry
-    btn.disabled = false;
-    btn.textContent = 'VERIFY';
+    try {
+      const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
+      const result = await verifyOtpHybrid({
+        phone: this.data.phone,
+        pinId: this.data.pinId,
+        pin: otp
+      });
+      
+      const { token, isExistingUser } = result.data;
+      if (!token) throw new Error("No authentication token received");
+      
+      // Step 1: Sign in to Firebase Auth
+      await signInWithCustomToken(auth, token);
+      
+      // Step 2: If signup, create user record + wallet
+      if (this.data.isSignup) {
+        await this.createUserRecord();
+      } else {
+        window.location.href = 'index.html';
+      }
+      
+    } catch (error) {
+      console.error("Verification error:", error);
+      alert(error.message);
+      btn.disabled = false;
+      btn.textContent = 'VERIFY';
+    }
   }
-}
 
 async createUserRecord() {
   const user = auth.currentUser;
@@ -180,7 +176,7 @@ async createUserRecord() {
         // Also update temp kennel doc
         const requestData = requestDoc.data();
         if (requestData.canonicalName) {
-          const tempId = tempKennelName(requestData.canonicalName);
+          const tempId = this.tempKennelName(requestData.canonicalName);
           const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
           await updateDoc(tempRef, {
             requesterUid: uid,

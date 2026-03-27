@@ -78,19 +78,22 @@ class VerifyOtpManager {
       await signInWithCustomToken(auth, token);
       
       // Step 2: If signup, create user record + wallet
-      if (this.data.isSignup) {
-        await this.createUserRecord();
-      } else {
-        window.location.href = 'index.html';
-      }
-      
-    } catch (error) {
-      console.error("Verification error:", error);
-      alert(error.message);
-      btn.disabled = false;
-      btn.textContent = 'VERIFY';
+      try {
+    // ... verify OTP ...
+    
+    if (this.data.isSignup) {
+      await this.createUserRecord();
+      return; // Add explicit return
     }
+    window.location.href = 'index.html';
+  } catch (error) {
+    console.error("Full error details:", error); // Log full error
+    alert(error.message);
+    // Don't redirect back to signup - let user retry OTP
+    btn.disabled = false;
+    btn.textContent = 'VERIFY';
   }
+}
 
 async createUserRecord() {
   const user = auth.currentUser;
@@ -176,7 +179,7 @@ async createUserRecord() {
         // Also update temp kennel doc
         const requestData = requestDoc.data();
         if (requestData.canonicalName) {
-          const tempId = this.tempKennelName(requestData.canonicalName);
+          const tempId = tempKennelName(requestData.canonicalName);
           const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
           await updateDoc(tempRef, {
             requesterUid: uid,

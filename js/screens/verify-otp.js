@@ -123,7 +123,7 @@ async createUserRecord() {
     designation: this.data.designation,
     createdWith: "termii",
     createdAt: serverTimestamp(),
-    walletPending: true
+    walletPending: true  // Flag to show dialog on home page
   };
   
   if (this.data.designation === "Admin") {
@@ -132,7 +132,6 @@ async createUserRecord() {
     userMap.role = "Tier 2";
   }
   
-  // STEP 1: Create user in transaction (CRITICAL - must succeed)
   try {
     await runTransaction(db, async (transaction) => {
       const phoneDoc = await transaction.get(phoneRef);
@@ -143,6 +142,7 @@ async createUserRecord() {
       transaction.set(phoneRef, { createdAt: serverTimestamp() });
       transaction.set(userRef, userMap);
       
+      // Don't save "Hasher" to designations
       const noTierRoles = ['Hasher', 'Member', 'Visitor'];
       if (!noTierRoles.includes(this.data.designation)) {
         const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
@@ -152,53 +152,48 @@ async createUserRecord() {
         }, { merge: true });
       }
     });
-  } catch (error) {
-    if (error.message === "PHONE_ALREADY_USED") {
-      throw new Error("This phone number is already registered. Please login instead.");
-    }
-    throw error; // Re-throw other errors
-  }
-  
-  // STEP 2: Update kennel requests (NOT critical - can fail silently)
-  try {
-    // FIX #1: Removed trailing space
-    const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     
-    const requestsQuery = query(
-      collection(db, 'kennelRequests'),
-      where('requesterPhone', '==', this.data.phone),
-      where('status', '==', 'pending')
-    );
-    const requestSnaps = await getDocs(requestsQuery);
-    
-    for (const requestDoc of requestSnaps.docs) {
-      await updateDoc(requestDoc.ref, {
-        requesterUid: uid,
-        requesterHandle: this.data.hashHandle
-      });
+       // After user creation, update kennelRequests with the actual UID (if user requested new kennel)
+    try {
+      const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
       
-      const requestData = requestDoc.data();
-      if (requestData.canonicalName) {
-        // FIX #2: Removed "this." - it's a standalone function
-        const tempId = tempKennelName(requestData.canonicalName);
-        const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
-        await updateDoc(tempRef, {
+      // Find pending kennel requests by this phone number
+      const requestsQuery = query(
+        collection(db, 'kennelRequests'),
+        where('requesterPhone', '==', this.data.phone),
+        where('status', '==', 'pending')
+      );
+      const requestSnaps = await getDocs(requestsQuery);
+      
+      for (const requestDoc of requestSnaps.docs) {
+        // Update with actual UID
+        await updateDoc(requestDoc.ref, {
           requesterUid: uid,
           requesterHandle: this.data.hashHandle
-        }).catch(e => console.log('Temp kennel may not exist:', e));
+        });
+        console.log('Updated kennel request with UID:', requestDoc.id);
+        
+        // Also update temp kennel doc
+        const requestData = requestDoc.data();
+        if (requestData.canonicalName) {
+          const tempId = tempKennelName(requestData.canonicalName);
+          const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
+          await updateDoc(tempRef, {
+            requesterUid: uid,
+            requesterHandle: this.data.hashHandle
+          }).catch(e => console.log('Temp kennel may not exist:', e));
+        }
       }
+    } catch (err) {
+      console.error('Error updating kennel requests with UID:', err);
+      // Don't block signup if this fails
     }
-  } catch (err) {
-    // Only log - don't throw, don't block signup
-    console.error('Non-critical: kennel request update failed:', err);
-  }
-  
-  // STEP 3: Only redirect after everything succeeds
-  sessionStorage.removeItem('signupData');
-  alert("Signup successful! Welcome to H3 Global.");
-  window.location.href = 'index.html';
-}
-  catch (error) {
+    
+    sessionStorage.removeItem('signupData');
+    alert("Signup successful! Welcome to H3 Global.");
+    window.location.href = 'index.html';
+    
+  } catch (error) {
     if (error.message === "PHONE_ALREADY_USED") {
       throw new Error("This phone number is already registered. Please login instead.");
     }

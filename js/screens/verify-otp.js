@@ -53,61 +53,26 @@ class VerifyOtpManager {
   }
 
   async verifyOtp() {
-  const otp = document.getElementById('etOtp').value.trim();
-  if (otp.length !== 6) {
-    alert("Enter 6-digit OTP code");
-    return;
-  }
-  
-  const btn = document.getElementById('btnVerify');
-  btn.disabled = true;
-  btn.textContent = 'Verifying...';
-  
-  console.log('=== VERIFY OTP START ===');
-  console.log('Phone:', this.data.phone);
-  console.log('isSignup:', this.data.isSignup);
-  
-  try {
-    console.log('Calling verifyOtpHybrid...');
-    const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
-    const result = await verifyOtpHybrid({
-      phone: this.data.phone,
-      pinId: this.data.pinId,
-      pin: otp
-    });
-    
-    console.log('verifyOtpHybrid result:', result.data);
-    const { token, isExistingUser } = result.data;
-    
-    if (!token) {
-      console.error('No token received');
-      throw new Error("No authentication token received");
+    const otp = document.getElementById('etOtp').value.trim();
+    if (otp.length !== 6) {
+      alert("Enter 6-digit OTP code");
+      return;
     }
     
-    console.log('Signing in with custom token...');
-    await signInWithCustomToken(auth, token);
-    console.log('Signed in successfully, UID:', auth.currentUser?.uid);
+    const btn = document.getElementById('btnVerify');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
     
-    if (this.data.isSignup) {
-      console.log('Starting createUserRecord...');
-      await this.createUserRecord();
-      console.log('createUserRecord completed');
-    } else {
-      console.log('Not signup, redirecting...');
-      window.location.href = 'index.html';
-    }
-    
-  } catch (error) {
-    console.error("=== VERIFY OTP ERROR ===");
-    console.error("Error object:", error);
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-    console.error("Error code:", error.code);
-    alert(error.message);
-    btn.disabled = false;
-    btn.textContent = 'VERIFY';
-  }
-}
+    try {
+      const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
+      const result = await verifyOtpHybrid({
+        phone: this.data.phone,
+        pinId: this.data.pinId,
+        pin: otp
+      });
+      
+      const { token, isExistingUser } = result.data;
+      if (!token) throw new Error("No authentication token received");
       
       // Step 1: Sign in to Firebase Auth
       await signInWithCustomToken(auth, token);
@@ -127,157 +92,107 @@ class VerifyOtpManager {
     }
   }
 
-async createUserRecord() {
-  console.log('=== CREATE USER RECORD START ===');
-  
-  const user = auth.currentUser;
-  console.log('Current user:', user?.uid);
-  
-  if (!user) {
-    console.error('No current user!');
-    throw new Error("Authentication failed - no user");
-  }
-  
-  const uid = user.uid;
-  console.log('UID:', uid);
-  
-  // Create fake email from phone
-  let cleanPhone = this.data.phone.replace(/\D/g, '');
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '234' + cleanPhone.substring(1);
-  } else if (cleanPhone.startsWith('+')) {
-    cleanPhone = cleanPhone.substring(1);
-  }
-  const fakeEmail = `user${cleanPhone}@h3global.app`;
-  console.log('Fake email:', fakeEmail);
-  
-  const userRef = doc(db, "users", uid);
-  const phoneRef = doc(db, "phoneNumbers", this.data.phone);
-  
-  console.log('userRef path:', userRef.path);
-  console.log('phoneRef path:', phoneRef.path);
-  
-  const userMap = {
-    hashHandle: this.data.hashHandle,
-    hashHandleLower: this.data.hashHandle.toLowerCase(),
-    firstName: this.data.firstName,
-    lastName: this.data.lastName,
-    phone: this.data.phone,
-    email: fakeEmail,
-    country: this.data.country,
-    state: this.data.state,
-    kennel: this.data.kennel,
-    designation: this.data.designation,
-    createdWith: "termii",
-    createdAt: serverTimestamp(),
-    walletPending: true
-  };
-  
-  console.log('User map:', userMap);
-  
-  if (this.data.designation === "Admin") {
-    userMap.role = "Tier 1";
-  } else if (["Grand Master", "Hash Master", "On Sec", "Religious Adviser"].includes(this.data.designation)) {
-    userMap.role = "Tier 2";
-  }
-  
-  console.log('Starting transaction...');
-  
-  try {
-    await runTransaction(db, async (transaction) => {
-      console.log('Inside transaction, checking phone...');
-      const phoneDoc = await transaction.get(phoneRef);
-      console.log('Phone doc exists:', phoneDoc.exists());
-      
-      if (phoneDoc.exists()) {
-        console.error('Phone already used!');
-        throw new Error("PHONE_ALREADY_USED");
-      }
-      
-      console.log('Setting phone ref...');
-      transaction.set(phoneRef, { createdAt: serverTimestamp() });
-      
-      console.log('Setting user ref...');
-      transaction.set(userRef, userMap);
-      
-      const noTierRoles = ['Hasher', 'Member', 'Visitor'];
-      if (!noTierRoles.includes(this.data.designation)) {
-        const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
-        console.log('Designation path:', designationPath);
-        const designationRef = doc(db, "designations", designationPath);
-        console.log('designationRef path:', designationRef.path);
-        transaction.set(designationRef, {
-          [this.data.designation]: this.data.phone
-        }, { merge: true });
-      }
-      
-      console.log('Transaction operations queued');
-    });
+  async createUserRecord() {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Authentication failed - no user");
     
-    console.log('Transaction committed successfully!');
+    const uid = user.uid;
     
-  } catch (error) {
-    console.error('Transaction failed:', error);
-    if (error.message === "PHONE_ALREADY_USED") {
-      throw new Error("This phone number is already registered. Please login instead.");
+    // Create fake email from phone
+    let cleanPhone = this.data.phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '234' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1);
     }
-    throw error;
-  }
-  
-  console.log('Starting kennel request update...');
-  
-  try {
-    console.log('Importing firestore modules...');
-    const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
-    console.log('Firestore modules imported');
+    const fakeEmail = `user${cleanPhone}@h3global.app`;
     
-    const requestsQuery = query(
-      collection(db, 'kennelRequests'),
-      where('requesterPhone', '==', this.data.phone),
-      where('status', '==', 'pending')
-    );
-    console.log('Query created');
+    const userRef = doc(db, "users", uid);
+    const phoneRef = doc(db, "phoneNumbers", this.data.phone);
     
-    const requestSnaps = await getDocs(requestsQuery);
-    console.log('Query result count:', requestSnaps.size);
+    const userMap = {
+      hashHandle: this.data.hashHandle,
+      hashHandleLower: this.data.hashHandle.toLowerCase(),
+      firstName: this.data.firstName,
+      lastName: this.data.lastName,
+      phone: this.data.phone,
+      email: fakeEmail,
+      country: this.data.country,
+      state: this.data.state,
+      kennel: this.data.kennel,
+      designation: this.data.designation,
+      createdWith: "termii",
+      createdAt: serverTimestamp(),
+      walletPending: true
+    };
     
-    for (const requestDoc of requestSnaps.docs) {
-      console.log('Updating request:', requestDoc.id);
-      await updateDoc(requestDoc.ref, {
-        requesterUid: uid,
-        requesterHandle: this.data.hashHandle
+    if (this.data.designation === "Admin") {
+      userMap.role = "Tier 1";
+    } else if (["Grand Master", "Hash Master", "On Sec", "Religious Adviser"].includes(this.data.designation)) {
+      userMap.role = "Tier 2";
+    }
+    
+    try {
+      await runTransaction(db, async (transaction) => {
+        const phoneDoc = await transaction.get(phoneRef);
+        if (phoneDoc.exists()) {
+          throw new Error("PHONE_ALREADY_USED");
+        }
+        
+        transaction.set(phoneRef, { createdAt: serverTimestamp() });
+        transaction.set(userRef, userMap);
+        
+        const noTierRoles = ['Hasher', 'Member', 'Visitor'];
+        if (!noTierRoles.includes(this.data.designation)) {
+          const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
+          const designationRef = doc(db, "designations", designationPath);
+          transaction.set(designationRef, {
+            [this.data.designation]: this.data.phone
+          }, { merge: true });
+        }
       });
+    } catch (error) {
+      if (error.message === "PHONE_ALREADY_USED") {
+        throw new Error("This phone number is already registered. Please login instead.");
+      }
+      throw error;
+    }
+    
+    // After user creation, update kennelRequests with the actual UID
+    try {
+      const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
       
-      const requestData = requestDoc.data();
-      if (requestData.canonicalName) {
-        const tempId = this.tempKennelName(requestData.canonicalName);
-        console.log('Temp kennel ID:', tempId);
-        const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
-        console.log('Temp ref path:', tempRef.path);
-        await updateDoc(tempRef, {
+      const requestsQuery = query(
+        collection(db, 'kennelRequests'),
+        where('requesterPhone', '==', this.data.phone),
+        where('status', '==', 'pending')
+      );
+      const requestSnaps = await getDocs(requestsQuery);
+      
+      for (const requestDoc of requestSnaps.docs) {
+        await updateDoc(requestDoc.ref, {
           requesterUid: uid,
           requesterHandle: this.data.hashHandle
-        }).catch(e => console.log('Temp kennel may not exist:', e));
+        });
+        
+        const requestData = requestDoc.data();
+        if (requestData.canonicalName) {
+          const tempId = tempKennelName(requestData.canonicalName);
+          const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
+          await updateDoc(tempRef, {
+            requesterUid: uid,
+            requesterHandle: this.data.hashHandle
+          }).catch(e => console.log('Temp kennel may not exist:', e));
+        }
       }
+    } catch (err) {
+      console.error('Error updating kennel requests with UID:', err);
     }
-    console.log('Kennel request update done');
-  } catch (err) {
-    console.error('Kennel request update error:', err);
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
+    
+    sessionStorage.removeItem('signupData');
+    alert("Signup successful! Welcome to H3 Global.");
+    window.location.href = 'index.html';
   }
-  
-  console.log('Removing session data and redirecting...');
-  sessionStorage.removeItem('signupData');
-  alert("Signup successful! Welcome to H3 Global.");
-  window.location.href = 'index.html';
-} catch (error) {
-    if (error.message === "PHONE_ALREADY_USED") {
-      throw new Error("This phone number is already registered. Please login instead.");
-    }
-    throw error;
-  }
-}
 
   async resendOtp() {
     try {

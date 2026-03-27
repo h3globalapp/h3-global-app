@@ -38,7 +38,7 @@
   <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
-     navigator.serviceWorker.register('./sw.js')
+     navigator.serviceWorker.register('/h3-global-app/sw.js', { scope: '/h3-global-app/' })
         .then((reg) => {
           console.log('SW registered:', reg.scope);
           // Force claim on install

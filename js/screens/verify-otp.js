@@ -35,7 +35,10 @@ class VerifyOtpManager {
       isSignup: sessionData.isSignup || false
     };
 
+    console.log('[DEBUG] VerifyOtpManager initialized with data:', this.data);
+
     if (!this.data.phone || !this.data.pinId) {
+      console.error('[DEBUG] Session expired - missing phone or pinId');
       alert('Session expired. Please start again.');
       window.location.href = 'signup.html';
       return;
@@ -50,10 +53,13 @@ class VerifyOtpManager {
     
     document.getElementById('btnVerify').addEventListener('click', () => this.verifyOtp());
     document.getElementById('btnResend').addEventListener('click', () => this.resendOtp());
+    console.log('[DEBUG] Event listeners attached');
   }
 
   async verifyOtp() {
     const otp = document.getElementById('etOtp').value.trim();
+    console.log('[DEBUG] OTP entered:', otp);
+    
     if (otp.length !== 6) {
       alert("Enter 6-digit OTP code");
       return;
@@ -64,6 +70,7 @@ class VerifyOtpManager {
     btn.textContent = 'Verifying...';
     
     try {
+      console.log('[DEBUG] Calling verifyOtpHybrid with phone:', this.data.phone, 'pinId:', this.data.pinId);
       const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
       const result = await verifyOtpHybrid({
         phone: this.data.phone,
@@ -71,21 +78,34 @@ class VerifyOtpManager {
         pin: otp
       });
       
+      console.log('[DEBUG] verifyOtpHybrid result:', result.data);
       const { token, isExistingUser } = result.data;
-      if (!token) throw new Error("No authentication token received");
+      
+      if (!token) {
+        console.error('[DEBUG] No token received from verifyOtpHybrid');
+        throw new Error("No authentication token received");
+      }
+      
+      console.log('[DEBUG] Token received, isExistingUser:', isExistingUser);
+      console.log('[DEBUG] isSignup flag:', this.data.isSignup);
       
       // Step 1: Sign in to Firebase Auth
+      console.log('[DEBUG] Signing in with custom token...');
       await signInWithCustomToken(auth, token);
+      console.log('[DEBUG] Firebase Auth sign-in successful. Current user:', auth.currentUser?.uid);
       
       // Step 2: If signup, create user record + wallet
       if (this.data.isSignup) {
+        console.log('[DEBUG] isSignup is true, proceeding to createUserRecord()');
         await this.createUserRecord();
       } else {
-        window.location.href = 'index.html';
+        console.log('[DEBUG] isSignup is false, would redirect to index.html (BLOCKED FOR DEBUG)');
+        // window.location.href = 'index.html';
       }
       
     } catch (error) {
-      console.error("Verification error:", error);
+      console.error("[DEBUG] Verification error:", error);
+      console.error("[DEBUG] Error stack:", error.stack);
       alert(error.message);
       btn.disabled = false;
       btn.textContent = 'VERIFY';
@@ -93,10 +113,17 @@ class VerifyOtpManager {
   }
 
   async createUserRecord() {
+    console.log('[DEBUG] createUserRecord() started');
     const user = auth.currentUser;
-    if (!user) throw new Error("Authentication failed - no user");
+    console.log('[DEBUG] Current user from auth:', user?.uid);
+    
+    if (!user) {
+      console.error('[DEBUG] No current user found in auth');
+      throw new Error("Authentication failed - no user");
+    }
     
     const uid = user.uid;
+    console.log('[DEBUG] UID:', uid);
     
     // Create fake email from phone
     let cleanPhone = this.data.phone.replace(/\D/g, '');
@@ -106,9 +133,12 @@ class VerifyOtpManager {
       cleanPhone = cleanPhone.substring(1);
     }
     const fakeEmail = `user${cleanPhone}@h3global.app`;
+    console.log('[DEBUG] Generated fakeEmail:', fakeEmail);
     
     const userRef = doc(db, "users", uid);
     const phoneRef = doc(db, "phoneNumbers", this.data.phone);
+    console.log('[DEBUG] userRef path:', userRef.path);
+    console.log('[DEBUG] phoneRef path:', phoneRef.path);
     
     const userMap = {
       hashHandle: this.data.hashHandle,
@@ -132,26 +162,43 @@ class VerifyOtpManager {
       userMap.role = "Tier 2";
     }
     
+    console.log('[DEBUG] userMap prepared:', userMap);
+    
     try {
+      console.log('[DEBUG] Starting Firestore transaction...');
       await runTransaction(db, async (transaction) => {
+        console.log('[DEBUG] Inside transaction, checking phoneRef...');
         const phoneDoc = await transaction.get(phoneRef);
+        console.log('[DEBUG] phoneDoc exists:', phoneDoc.exists());
+        
         if (phoneDoc.exists()) {
+          console.error('[DEBUG] Phone number already exists in database');
           throw new Error("PHONE_ALREADY_USED");
         }
         
+        console.log('[DEBUG] Setting phoneRef document...');
         transaction.set(phoneRef, { createdAt: serverTimestamp() });
+        
+        console.log('[DEBUG] Setting userRef document...');
         transaction.set(userRef, userMap);
         
         const noTierRoles = ['Hasher', 'Member', 'Visitor'];
         if (!noTierRoles.includes(this.data.designation)) {
           const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
           const designationRef = doc(db, "designations", designationPath);
+          console.log('[DEBUG] Setting designationRef at:', designationRef.path);
           transaction.set(designationRef, {
             [this.data.designation]: this.data.phone
           }, { merge: true });
+        } else {
+          console.log('[DEBUG] Designation is in noTierRoles, skipping designation creation');
         }
       });
+      
+      console.log('[DEBUG] Firestore transaction completed successfully!');
+      
     } catch (error) {
+      console.error('[DEBUG] Transaction error:', error);
       if (error.message === "PHONE_ALREADY_USED") {
         throw new Error("This phone number is already registered. Please login instead.");
       }
@@ -159,6 +206,7 @@ class VerifyOtpManager {
     }
     
     // After user creation, update kennelRequests with the actual UID
+    console.log('[DEBUG] Starting kennelRequests update...');
     try {
       const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
       
@@ -167,9 +215,13 @@ class VerifyOtpManager {
         where('requesterPhone', '==', this.data.phone),
         where('status', '==', 'pending')
       );
+      console.log('[DEBUG] Querying kennelRequests for phone:', this.data.phone);
+      
       const requestSnaps = await getDocs(requestsQuery);
+      console.log('[DEBUG] Found', requestSnaps.docs.length, 'pending kennelRequests');
       
       for (const requestDoc of requestSnaps.docs) {
+        console.log('[DEBUG] Updating kennelRequest:', requestDoc.id);
         await updateDoc(requestDoc.ref, {
           requesterUid: uid,
           requesterHandle: this.data.hashHandle
@@ -179,22 +231,30 @@ class VerifyOtpManager {
         if (requestData.canonicalName) {
           const tempId = tempKennelName(requestData.canonicalName);
           const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
+          console.log('[DEBUG] Updating temp kennel at:', tempRef.path);
           await updateDoc(tempRef, {
             requesterUid: uid,
             requesterHandle: this.data.hashHandle
-          }).catch(e => console.log('Temp kennel may not exist:', e));
+          }).catch(e => console.log('[DEBUG] Temp kennel may not exist:', e));
         }
       }
+      
+      console.log('[DEBUG] kennelRequests update completed');
+      
     } catch (err) {
-      console.error('Error updating kennel requests with UID:', err);
+      console.error('[DEBUG] Error updating kennel requests with UID:', err);
     }
     
+    console.log('[DEBUG] Removing signupData from sessionStorage');
     sessionStorage.removeItem('signupData');
-    alert("Signup successful! Welcome to H3 Global.");
-    window.location.href = 'index.html';
+    
+    console.log('[DEBUG] Signup successful! Would redirect to index.html (BLOCKED FOR DEBUG)');
+    alert("Signup successful! Welcome to H3 Global. (DEBUG MODE - Check console for logs)");
+    // window.location.href = 'index.html';
   }
 
   async resendOtp() {
+    console.log('[DEBUG] Resend OTP requested for phone:', this.data.phone);
     try {
       const sendOtpTermii = httpsCallable(functions, 'sendOtpTermii');
       const result = await sendOtpTermii({
@@ -205,13 +265,15 @@ class VerifyOtpManager {
       
       this.data.pinId = result.data.pin_id;
       sessionStorage.setItem('signupData', JSON.stringify(this.data));
+      console.log('[DEBUG] New OTP sent, pinId updated:', this.data.pinId);
       alert("New OTP sent!");
       
     } catch (error) {
-      console.error("Resend error:", error);
+      console.error("[DEBUG] Resend error:", error);
       alert("Failed to resend OTP: " + error.message);
     }
   }
 }
 
+console.log('[DEBUG] Initializing VerifyOtpManager...');
 new VerifyOtpManager();

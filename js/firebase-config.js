@@ -127,9 +127,18 @@ export async function initWebPushNotifications(userId) {
 }
 
 // ==================== AUTH STATE ====================
+// ==================== AUTH STATE ====================
 onAuthStateChanged(auth, async (user) => {
   const currentPage = window.location.pathname.split('/').pop();
   const publicPages = ['login.html', 'signup.html', 'verify-otp.html',''];
+  
+  // DEBUG: Don't redirect if debug flag is set
+  if (window.DEBUG_BLOCK_REDIRECT || sessionStorage.getItem('DEBUG_BLOCK_REDIRECT')) {
+    console.log('[DEBUG] Auth redirect blocked - DEBUG_BLOCK_REDIRECT is active');
+    console.log('[DEBUG] User:', user?.uid);
+    console.log('[DEBUG] Current page:', currentPage);
+    return;
+  }
   
   if (!user && !publicPages.includes(currentPage)) {
     window.location.href = 'login.html';

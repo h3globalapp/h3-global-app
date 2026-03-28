@@ -1,93 +1,36 @@
 // ===== DEBUG MODE - BLOCK ALL REDIRECTS =====
 console.log('[DEBUG] ===== VERIFY OTP PAGE LOADED - REDIRECTS BLOCKED =====');
 
-// Set flags that firebase-config.js will check
+// Set flag BEFORE any imports load
 window.DEBUG_BLOCK_REDIRECT = true;
 sessionStorage.setItem('DEBUG_BLOCK_REDIRECT', 'true');
 
-// Store original functions before firebase-config loads them
-const originalLocationSet = Object.getOwnPropertyDescriptor(window.location, 'href');
-if (originalLocationSet && originalLocationSet.set) {
-  window._originalHrefSetter = originalLocationSet.set;
-}
-
-// Override using a different method - wrap in try-catch
-try {
-  // Method 1: Override assign/replace (these usually work)
-  const originalAssign = window.location.assign.bind(window.location);
-  const originalReplace = window.location.replace.bind(window.location);
-  
-  window.location.assign = function(url) {
-    console.log('[DEBUG] BLOCKED location.assign to:', url);
-    console.trace();
-    alert('[DEBUG] Redirect blocked (assign): ' + url);
-    return;
-  };
-  
-  window.location.replace = function(url) {
-    console.log('[DEBUG] BLOCKED location.replace to:', url);
-    console.trace();
-    alert('[DEBUG] Redirect blocked (replace): ' + url);
-    return;
-  };
-  
-  // Method 2: Use a proxy for the location object
-  if (!window._locationProxied) {
-    window._locationProxied = true;
-    
-    // Create a proxy that intercepts property sets
-    const locationProxy = new Proxy(window.location, {
-      set(target, prop, value) {
-        if (prop === 'href') {
-          console.log('[DEBUG] BLOCKED href change to:', value);
-          console.trace();
-          alert('[DEBUG] Redirect blocked (href): ' + value);
-          return true; // Pretend we set it
-        }
-        target[prop] = value;
-        return true;
-      }
-    });
-    
-    // Try to override the reference (may not work in all browsers)
-    try {
-      Object.defineProperty(window, 'location', {
-        value: locationProxy,
-        writable: false,
-        configurable: false
-      });
-      console.log('[DEBUG] Location proxy installed');
-    } catch (e) {
-      console.log('[DEBUG] Could not proxy window.location:', e.message);
-    }
-  }
-  
-} catch (e) {
-  console.log('[DEBUG] Error setting up redirect block:', e);
-}
-
-// Method 3: Block beforeunload to prevent navigation
+// Block navigation attempts without redefining href
 window.addEventListener('beforeunload', function(e) {
-  if (window.DEBUG_BLOCK_REDIRECT) {
-    console.log('[DEBUG] Blocked page unload attempt');
-    e.preventDefault();
-    e.returnValue = 'Debug mode active - are you sure you want to leave?';
-    return e.returnValue;
-  }
-}, true);
+  console.log('[DEBUG] Blocked navigation attempt');
+  e.preventDefault();
+  e.returnValue = 'Debug mode - leaving will lose logs';
+  return 'Debug mode - leaving will lose logs';
+});
 
-// Method 4: Override window.open
-const originalOpen = window.open;
-window.open = function(url, target, features) {
-  if (window.DEBUG_BLOCK_REDIRECT) {
-    console.log('[DEBUG] BLOCKED window.open to:', url);
-    alert('[DEBUG] Popup blocked: ' + url);
-    return null;
-  }
-  return originalOpen.apply(this, arguments);
+// Override navigation methods (these are safer than href)
+const originalAssign = window.location.assign;
+const originalReplace = window.location.replace;
+
+window.location.assign = function(url) {
+  console.log('[DEBUG] BLOCKED assign to:', url);
+  console.trace();
+  alert('BLOCKED redirect to: ' + url + '\nCheck console for stack trace');
 };
 
-console.log('[DEBUG] Redirect blocking initialized');
+window.location.replace = function(url) {
+  console.log('[DEBUG] BLOCKED replace to:', url);
+  console.trace();
+  alert('BLOCKED redirect to: ' + url + '\nCheck console for stack trace');
+};
+
+console.log('[DEBUG] Redirect blocking active');
+// ===== END DEBUG BLOCK =====
 // ===== END DEBUG BLOCK =====
 
 import { auth, db, functions } from '../firebase-config.js';

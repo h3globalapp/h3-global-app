@@ -1,3 +1,9 @@
+// ===== DEBUG MODE - BLOCK ALL REDIRECTS =====
+window.DEBUG_BLOCK_REDIRECT = true;
+sessionStorage.setItem('DEBUG_BLOCK_REDIRECT', 'true');
+console.log('[DEBUG] ===== VERIFY OTP PAGE LOADED - REDIRECTS BLOCKED =====');
+// ===== END DEBUG BLOCK =====
+
 // js/screens/verify-otp.js
 import { auth, db, functions } from '../firebase-config.js';
 import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";

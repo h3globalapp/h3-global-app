@@ -31,10 +31,7 @@ window.location.replace = function(url) {
 
 console.log('[DEBUG] Redirect blocking active');
 // ===== END DEBUG BLOCK =====
-// ===== END DEBUG BLOCK =====
 
-import { auth, db, functions } from '../firebase-config.js';
-import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // js/screens/verify-otp.js
 import { auth, db, functions } from '../firebase-config.js';

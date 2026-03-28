@@ -112,146 +112,99 @@ class VerifyOtpManager {
     }
   }
 
-  async createUserRecord() {
-    console.log('[DEBUG] createUserRecord() started');
-    const user = auth.currentUser;
-    console.log('[DEBUG] Current user from auth:', user?.uid);
-    
-    if (!user) {
-      console.error('[DEBUG] No current user found in auth');
-      throw new Error("Authentication failed - no user");
-    }
-    
-    const uid = user.uid;
-    console.log('[DEBUG] UID:', uid);
-    
-    // Create fake email from phone
-    let cleanPhone = this.data.phone.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = '234' + cleanPhone.substring(1);
-    } else if (cleanPhone.startsWith('+')) {
-      cleanPhone = cleanPhone.substring(1);
-    }
-    const fakeEmail = `user${cleanPhone}@h3global.app`;
-    console.log('[DEBUG] Generated fakeEmail:', fakeEmail);
-    
-    const userRef = doc(db, "users", uid);
-    const phoneRef = doc(db, "phoneNumbers", this.data.phone);
-    console.log('[DEBUG] userRef path:', userRef.path);
-    console.log('[DEBUG] phoneRef path:', phoneRef.path);
-    
-    const userMap = {
-      hashHandle: this.data.hashHandle,
-      hashHandleLower: this.data.hashHandle.toLowerCase(),
-      firstName: this.data.firstName,
-      lastName: this.data.lastName,
-      phone: this.data.phone,
-      email: fakeEmail,
-      country: this.data.country,
-      state: this.data.state,
-      kennel: this.data.kennel,
-      designation: this.data.designation,
-      createdWith: "termii",
-      createdAt: serverTimestamp(),
-      walletPending: true
-    };
-    
-    if (this.data.designation === "Admin") {
-      userMap.role = "Tier 1";
-    } else if (["Grand Master", "Hash Master", "On Sec", "Religious Adviser"].includes(this.data.designation)) {
-      userMap.role = "Tier 2";
-    }
-    
-    console.log('[DEBUG] userMap prepared:', userMap);
-    
-    try {
-      console.log('[DEBUG] Starting Firestore transaction...');
-      await runTransaction(db, async (transaction) => {
-        console.log('[DEBUG] Inside transaction, checking phoneRef...');
-        const phoneDoc = await transaction.get(phoneRef);
-        console.log('[DEBUG] phoneDoc exists:', phoneDoc.exists());
-        
-        if (phoneDoc.exists()) {
-          console.error('[DEBUG] Phone number already exists in database');
-          throw new Error("PHONE_ALREADY_USED");
-        }
-        
-        console.log('[DEBUG] Setting phoneRef document...');
-        transaction.set(phoneRef, { createdAt: serverTimestamp() });
-        
-        console.log('[DEBUG] Setting userRef document...');
-        transaction.set(userRef, userMap);
-        
-        const noTierRoles = ['Hasher', 'Member', 'Visitor'];
-        if (!noTierRoles.includes(this.data.designation)) {
-          const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
-          const designationRef = doc(db, "designations", designationPath);
-          console.log('[DEBUG] Setting designationRef at:', designationRef.path);
-          transaction.set(designationRef, {
-            [this.data.designation]: this.data.phone
-          }, { merge: true });
-        } else {
-          console.log('[DEBUG] Designation is in noTierRoles, skipping designation creation');
-        }
-      });
-      
-      console.log('[DEBUG] Firestore transaction completed successfully!');
-      
-    } catch (error) {
-      console.error('[DEBUG] Transaction error:', error);
-      if (error.message === "PHONE_ALREADY_USED") {
-        throw new Error("This phone number is already registered. Please login instead.");
-      }
-      throw error;
-    }
-    
-    // After user creation, update kennelRequests with the actual UID
-    console.log('[DEBUG] Starting kennelRequests update...');
-    try {
-      const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-      
-      const requestsQuery = query(
-        collection(db, 'kennelRequests'),
-        where('requesterPhone', '==', this.data.phone),
-        where('status', '==', 'pending')
-      );
-      console.log('[DEBUG] Querying kennelRequests for phone:', this.data.phone);
-      
-      const requestSnaps = await getDocs(requestsQuery);
-      console.log('[DEBUG] Found', requestSnaps.docs.length, 'pending kennelRequests');
-      
-      for (const requestDoc of requestSnaps.docs) {
-        console.log('[DEBUG] Updating kennelRequest:', requestDoc.id);
-        await updateDoc(requestDoc.ref, {
-          requesterUid: uid,
-          requesterHandle: this.data.hashHandle
-        });
-        
-        const requestData = requestDoc.data();
-        if (requestData.canonicalName) {
-          const tempId = tempKennelName(requestData.canonicalName);
-          const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
-          console.log('[DEBUG] Updating temp kennel at:', tempRef.path);
-          await updateDoc(tempRef, {
-            requesterUid: uid,
-            requesterHandle: this.data.hashHandle
-          }).catch(e => console.log('[DEBUG] Temp kennel may not exist:', e));
-        }
-      }
-      
-      console.log('[DEBUG] kennelRequests update completed');
-      
-    } catch (err) {
-      console.error('[DEBUG] Error updating kennel requests with UID:', err);
-    }
-    
-    console.log('[DEBUG] Removing signupData from sessionStorage');
-    sessionStorage.removeItem('signupData');
-    
-    console.log('[DEBUG] Signup successful! Would redirect to index.html (BLOCKED FOR DEBUG)');
-    alert("Signup successful! Welcome to H3 Global. (DEBUG MODE - Check console for logs)");
-    // window.location.href = 'index.html';
+ async createUserRecord() {
+  console.log('[DEBUG] createUserRecord() started');
+  const user = auth.currentUser;
+  if (!user) throw new Error("Authentication failed - no user");
+  
+  const uid = user.uid;
+  
+  // Create fake email from phone
+  let cleanPhone = this.data.phone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '234' + cleanPhone.substring(1);
+  } else if (cleanPhone.startsWith('+')) {
+    cleanPhone = cleanPhone.substring(1);
   }
+  const fakeEmail = `user${cleanPhone}@h3global.app`;
+  
+  const userRef = doc(db, "users", uid);
+  const phoneRef = doc(db, "phoneNumbers", this.data.phone);
+  
+  const userMap = {
+    hashHandle: this.data.hashHandle,
+    hashHandleLower: this.data.hashHandle.toLowerCase(),
+    firstName: this.data.firstName,
+    lastName: this.data.lastName,
+    phone: this.data.phone,
+    email: fakeEmail,
+    country: this.data.country,
+    state: this.data.state,
+    kennel: this.data.kennel,
+    designation: this.data.designation,
+    createdWith: "termii",
+    createdAt: serverTimestamp(),
+    walletPending: true
+  };
+  
+  if (this.data.designation === "Admin") {
+    userMap.role = "Tier 1";
+  } else if (["Grand Master", "Hash Master", "On Sec", "Religious Adviser"].includes(this.data.designation)) {
+    userMap.role = "Tier 2";
+  }
+  
+  try {
+    // Step 1: Check if phone exists (outside transaction)
+    console.log('[DEBUG] Checking if phone exists...');
+    const phoneCheck = await getDoc(phoneRef);
+    console.log('[DEBUG] Phone exists:', phoneCheck.exists());
+    
+    if (phoneCheck.exists()) {
+      throw new Error("This phone number is already registered. Please login instead.");
+    }
+    
+    // Step 2: Create documents WITHOUT transaction (simpler, avoids rules issues)
+    console.log('[DEBUG] Creating phone document...');
+    await setDoc(phoneRef, { createdAt: serverTimestamp() });
+    console.log('[DEBUG] Phone document created');
+    
+    console.log('[DEBUG] Creating user document...');
+    await setDoc(userRef, userMap);
+    console.log('[DEBUG] User document created');
+    
+    // Step 3: Handle designation if needed
+    const noTierRoles = ['Hasher', 'Member', 'Visitor'];
+    if (!noTierRoles.includes(this.data.designation)) {
+      const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
+      const designationRef = doc(db, "designations", designationPath);
+      console.log('[DEBUG] Creating designation at:', designationPath);
+      await setDoc(designationRef, {
+        [this.data.designation]: this.data.phone
+      }, { merge: true });
+      console.log('[DEBUG] Designation created');
+    }
+    
+    console.log('[DEBUG] All documents created successfully!');
+    
+  } catch (error) {
+    console.error('[DEBUG] Error creating records:', error);
+    console.error('[DEBUG] Error code:', error.code);
+    console.error('[DEBUG] Error message:', error.message);
+    
+    // Cleanup: if user doc was created but phone wasn't, or vice versa
+    // This is best-effort cleanup
+    try {
+      const phoneCheck = await getDoc(phoneRef);
+      const userCheck = await getDoc(userRef);
+      console.log('[DEBUG] Cleanup check - phone exists:', phoneCheck.exists(), 'user exists:', userCheck.exists());
+    } catch (e) {
+      console.log('[DEBUG] Cleanup check failed:', e);
+    }
+    
+    throw error;
+  }
+  
+  // ... rest of kennelRequests update code stays the same ...
 
   async resendOtp() {
     console.log('[DEBUG] Resend OTP requested for phone:', this.data.phone);

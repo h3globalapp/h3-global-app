@@ -1,10 +1,38 @@
 // js/screens/verify-otp.js
 import { auth, db, functions } from '../firebase-config.js';
 import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, setDoc, runTransaction, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
-// Temp kennel name generator (matches Android exactly)
+// BLOCK ALL REDIRECTS FOR DEBUGGING
+console.log('[DEBUG] ===== VERIFY OTP PAGE LOADED =====');
+console.log('[DEBUG] Blocking all redirects for debugging');
+
+// Override window.location methods to prevent redirects
+const originalHref = window.location.href;
+Object.defineProperty(window.location, 'href', {
+  set: function(url) {
+    console.log('[DEBUG] BLOCKED redirect to:', url);
+    console.log('[DEBUG] Stack trace:', new Error().stack);
+    alert('[DEBUG] Redirect blocked to: ' + url + '\nCheck console for logs');
+    // Don't actually redirect
+  },
+  get: function() {
+    return originalHref;
+  }
+});
+
+// Also block replace and assign
+window.location.replace = function(url) {
+  console.log('[DEBUG] BLOCKED location.replace to:', url);
+  alert('[DEBUG] Redirect blocked (replace) to: ' + url);
+};
+window.location.assign = function(url) {
+  console.log('[DEBUG] BLOCKED location.assign to:', url);
+  alert('[DEBUG] Redirect blocked (assign) to: ' + url);
+};
+
+// Temp kennel name generator
 function tempKennelName(requested) {
   let hash = 0;
   for (let i = 0; i < requested.length; i++) {
@@ -19,7 +47,10 @@ function tempKennelName(requested) {
 
 class VerifyOtpManager {
   constructor() {
+    console.log('[DEBUG] VerifyOtpManager constructor started');
+    
     const sessionData = JSON.parse(sessionStorage.getItem('signupData') || '{}');
+    console.log('[DEBUG] sessionData loaded:', sessionData);
     
     this.data = {
       phone: sessionData.phone,
@@ -35,12 +66,14 @@ class VerifyOtpManager {
       isSignup: sessionData.isSignup || false
     };
 
-    console.log('[DEBUG] VerifyOtpManager initialized with data:', this.data);
+    console.log('[DEBUG] this.data prepared:', this.data);
 
     if (!this.data.phone || !this.data.pinId) {
-      console.error('[DEBUG] Session expired - missing phone or pinId');
+      console.error('[DEBUG] MISSING phone or pinId!');
+      console.error('[DEBUG] phone:', this.data.phone);
+      console.error('[DEBUG] pinId:', this.data.pinId);
       alert('Session expired. Please start again.');
-      window.location.href = 'signup.html';
+      // DO NOT redirect - let user see the error
       return;
     }
     
@@ -48,19 +81,42 @@ class VerifyOtpManager {
   }
 
   init() {
-    const phoneDisplay = document.getElementById('phoneDisplay');
-    if (phoneDisplay) phoneDisplay.textContent = this.data.phone;
+    console.log('[DEBUG] init() called');
     
-    document.getElementById('btnVerify').addEventListener('click', () => this.verifyOtp());
-    document.getElementById('btnResend').addEventListener('click', () => this.resendOtp());
-    console.log('[DEBUG] Event listeners attached');
+    const phoneDisplay = document.getElementById('phoneDisplay');
+    if (phoneDisplay) {
+      phoneDisplay.textContent = this.data.phone;
+      console.log('[DEBUG] phoneDisplay set to:', this.data.phone);
+    } else {
+      console.error('[DEBUG] phoneDisplay element not found!');
+    }
+    
+    const btnVerify = document.getElementById('btnVerify');
+    const btnResend = document.getElementById('btnResend');
+    
+    if (btnVerify) {
+      btnVerify.addEventListener('click', () => this.verifyOtp());
+      console.log('[DEBUG] btnVerify listener attached');
+    } else {
+      console.error('[DEBUG] btnVerify not found!');
+    }
+    
+    if (btnResend) {
+      btnResend.addEventListener('click', () => this.resendOtp());
+      console.log('[DEBUG] btnResend listener attached');
+    } else {
+      console.error('[DEBUG] btnResend not found!');
+    }
   }
 
   async verifyOtp() {
+    console.log('[DEBUG] ===== verifyOtp() STARTED =====');
+    
     const otp = document.getElementById('etOtp').value.trim();
     console.log('[DEBUG] OTP entered:', otp);
     
     if (otp.length !== 6) {
+      console.error('[DEBUG] OTP length invalid:', otp.length);
       alert("Enter 6-digit OTP code");
       return;
     }
@@ -70,7 +126,10 @@ class VerifyOtpManager {
     btn.textContent = 'Verifying...';
     
     try {
-      console.log('[DEBUG] Calling verifyOtpHybrid with phone:', this.data.phone, 'pinId:', this.data.pinId);
+      console.log('[DEBUG] Calling verifyOtpHybrid...');
+      console.log('[DEBUG] Phone:', this.data.phone);
+      console.log('[DEBUG] PinId:', this.data.pinId);
+      
       const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid');
       const result = await verifyOtpHybrid({
         phone: this.data.phone,
@@ -78,46 +137,64 @@ class VerifyOtpManager {
         pin: otp
       });
       
-      console.log('[DEBUG] verifyOtpHybrid result:', result.data);
+      console.log('[DEBUG] verifyOtpHybrid SUCCESS');
+      console.log('[DEBUG] Full result:', result);
+      console.log('[DEBUG] result.data:', result.data);
+      
       const { token, isExistingUser } = result.data;
+      console.log('[DEBUG] token received:', token ? 'YES (length: ' + token.length + ')' : 'NO');
+      console.log('[DEBUG] isExistingUser:', isExistingUser);
       
       if (!token) {
-        console.error('[DEBUG] No token received from verifyOtpHybrid');
+        console.error('[DEBUG] NO TOKEN in result!');
         throw new Error("No authentication token received");
       }
       
-      console.log('[DEBUG] Token received, isExistingUser:', isExistingUser);
-      console.log('[DEBUG] isSignup flag:', this.data.isSignup);
-      
       // Step 1: Sign in to Firebase Auth
-      console.log('[DEBUG] Signing in with custom token...');
-      await signInWithCustomToken(auth, token);
-      console.log('[DEBUG] Firebase Auth sign-in successful. Current user:', auth.currentUser?.uid);
+      console.log('[DEBUG] Calling signInWithCustomToken...');
+      const userCredential = await signInWithCustomToken(auth, token);
+      console.log('[DEBUG] signInWithCustomToken SUCCESS');
+      console.log('[DEBUG] User UID:', userCredential.user?.uid);
+      console.log('[DEBUG] Auth currentUser:', auth.currentUser?.uid);
       
-      // Step 2: If signup, create user record + wallet
+      // Step 2: If signup, create user record
       if (this.data.isSignup) {
-        console.log('[DEBUG] isSignup is true, proceeding to createUserRecord()');
+        console.log('[DEBUG] isSignup=true, calling createUserRecord()...');
         await this.createUserRecord();
+        console.log('[DEBUG] createUserRecord() completed');
       } else {
-        console.log('[DEBUG] isSignup is false, would redirect to index.html (BLOCKED FOR DEBUG)');
-        // window.location.href = 'index.html';
+        console.log('[DEBUG] isSignup=false, login flow complete');
+        console.log('[DEBUG] Would redirect to index.html but BLOCKED');
       }
       
+      console.log('[DEBUG] ===== verifyOtp() COMPLETED SUCCESSFULLY =====');
+      
     } catch (error) {
-      console.error("[DEBUG] Verification error:", error);
-      console.error("[DEBUG] Error stack:", error.stack);
-      alert(error.message);
+      console.error('[DEBUG] ===== verifyOtp() ERROR =====');
+      console.error('[DEBUG] Error object:', error);
+      console.error('[DEBUG] Error message:', error.message);
+      console.error('[DEBUG] Error code:', error.code);
+      console.error('[DEBUG] Error stack:', error.stack);
+      
+      alert('Error: ' + error.message);
       btn.disabled = false;
       btn.textContent = 'VERIFY';
     }
   }
 
   async createUserRecord() {
-    console.log('[DEBUG] createUserRecord() started');
+    console.log('[DEBUG] ===== createUserRecord() STARTED =====');
+    
     const user = auth.currentUser;
-    if (!user) throw new Error("Authentication failed - no user");
+    console.log('[DEBUG] auth.currentUser:', user?.uid);
+    
+    if (!user) {
+      console.error('[DEBUG] No current user!');
+      throw new Error("Authentication failed - no user");
+    }
     
     const uid = user.uid;
+    console.log('[DEBUG] UID:', uid);
     
     // Create fake email from phone
     let cleanPhone = this.data.phone.replace(/\D/g, '');
@@ -127,9 +204,13 @@ class VerifyOtpManager {
       cleanPhone = cleanPhone.substring(1);
     }
     const fakeEmail = `user${cleanPhone}@h3global.app`;
+    console.log('[DEBUG] fakeEmail:', fakeEmail);
     
     const userRef = doc(db, "users", uid);
-    const phoneRef = doc(db, "phoneNumbers", this.data.phone);
+    const phoneRef = doc(doc(db, "phoneNumbers", this.data.phone));
+    
+    console.log('[DEBUG] userRef path:', userRef.path);
+    console.log('[DEBUG] phoneRef path:', phoneRef.path);
     
     const userMap = {
       hashHandle: this.data.hashHandle,
@@ -153,96 +234,62 @@ class VerifyOtpManager {
       userMap.role = "Tier 2";
     }
     
+    console.log('[DEBUG] userMap prepared:', JSON.stringify(userMap, null, 2));
+    
     try {
-      // Step 1: Check if phone exists (outside transaction)
-      console.log('[DEBUG] Checking if phone exists...');
+      // Step 1: Check if phone exists
+      console.log('[DEBUG] Checking phone existence...');
       const phoneCheck = await getDoc(phoneRef);
-      console.log('[DEBUG] Phone exists:', phoneCheck.exists());
+      console.log('[DEBUG] phoneCheck.exists():', phoneCheck.exists());
       
       if (phoneCheck.exists()) {
+        console.error('[DEBUG] Phone already exists!');
         throw new Error("This phone number is already registered. Please login instead.");
       }
       
-      // Step 2: Create documents WITHOUT transaction (simpler, avoids rules issues)
+      // Step 2: Create phone document
       console.log('[DEBUG] Creating phone document...');
       await setDoc(phoneRef, { createdAt: serverTimestamp() });
-      console.log('[DEBUG] Phone document created');
+      console.log('[DEBUG] Phone document CREATED successfully');
       
+      // Step 3: Create user document
       console.log('[DEBUG] Creating user document...');
       await setDoc(userRef, userMap);
-      console.log('[DEBUG] User document created');
+      console.log('[DEBUG] User document CREATED successfully');
       
-      // Step 3: Handle designation if needed
+      // Step 4: Handle designation
       const noTierRoles = ['Hasher', 'Member', 'Visitor'];
       if (!noTierRoles.includes(this.data.designation)) {
+        console.log('[DEBUG] Creating designation...');
         const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
         const designationRef = doc(db, "designations", designationPath);
-        console.log('[DEBUG] Creating designation at:', designationPath);
         await setDoc(designationRef, {
           [this.data.designation]: this.data.phone
         }, { merge: true });
         console.log('[DEBUG] Designation created');
+      } else {
+        console.log('[DEBUG] Skipping designation (noTierRole)');
       }
       
-      console.log('[DEBUG] All documents created successfully!');
+      console.log('[DEBUG] ===== ALL DOCUMENTS CREATED SUCCESSFULLY =====');
       
     } catch (error) {
-      console.error('[DEBUG] Error creating records:', error);
+      console.error('[DEBUG] ===== createUserRecord() ERROR =====');
+      console.error('[DEBUG] Error:', error);
       console.error('[DEBUG] Error code:', error.code);
       console.error('[DEBUG] Error message:', error.message);
       throw error;
     }
     
-    // After user creation, update kennelRequests with the actual UID
-    console.log('[DEBUG] Starting kennelRequests update...');
-    try {
-      const { updateDoc, query, where, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-      
-      const requestsQuery = query(
-        collection(db, 'kennelRequests'),
-        where('requesterPhone', '==', this.data.phone),
-        where('status', '==', 'pending')
-      );
-      console.log('[DEBUG] Querying kennelRequests for phone:', this.data.phone);
-      
-      const requestSnaps = await getDocs(requestsQuery);
-      console.log('[DEBUG] Found', requestSnaps.docs.length, 'pending kennelRequests');
-      
-      for (const requestDoc of requestSnaps.docs) {
-        console.log('[DEBUG] Updating kennelRequest:', requestDoc.id);
-        await updateDoc(requestDoc.ref, {
-          requesterUid: uid,
-          requesterHandle: this.data.hashHandle
-        });
-        
-        const requestData = requestDoc.data();
-        if (requestData.canonicalName) {
-          const tempId = tempKennelName(requestData.canonicalName);
-          const tempRef = doc(db, `locations/${requestData.country}/states/${requestData.state}/kennels/${tempId}`);
-          console.log('[DEBUG] Updating temp kennel at:', tempRef.path);
-          await updateDoc(tempRef, {
-            requesterUid: uid,
-            requesterHandle: this.data.hashHandle
-          }).catch(e => console.log('[DEBUG] Temp kennel may not exist:', e));
-        }
-      }
-      
-      console.log('[DEBUG] kennelRequests update completed');
-      
-    } catch (err) {
-      console.error('[DEBUG] Error updating kennel requests with UID:', err);
-    }
+    // DO NOT clear sessionStorage or redirect - keep page alive for debugging
+    console.log('[DEBUG] SKIPPING sessionStorage.removeItem and redirect');
+    console.log('[DEBUG] Page will STAY HERE for debugging');
     
-    console.log('[DEBUG] Removing signupData from sessionStorage');
-    sessionStorage.removeItem('signupData');
-    
-    console.log('[DEBUG] Signup successful! Would redirect to index.html (BLOCKED FOR DEBUG)');
-    alert("Signup successful! Welcome to H3 Global. (DEBUG MODE - Check console for logs)");
-    // window.location.href = 'index.html';
+    alert('[DEBUG] Signup complete! Check console logs. Page will NOT redirect.');
   }
 
   async resendOtp() {
-    console.log('[DEBUG] Resend OTP requested for phone:', this.data.phone);
+    console.log('[DEBUG] resendOtp() called');
     try {
       const sendOtpTermii = httpsCallable(functions, 'sendOtpTermii');
       const result = await sendOtpTermii({
@@ -253,15 +300,16 @@ class VerifyOtpManager {
       
       this.data.pinId = result.data.pin_id;
       sessionStorage.setItem('signupData', JSON.stringify(this.data));
-      console.log('[DEBUG] New OTP sent, pinId updated:', this.data.pinId);
+      console.log('[DEBUG] New OTP sent, pinId:', this.data.pinId);
       alert("New OTP sent!");
       
     } catch (error) {
-      console.error("[DEBUG] Resend error:", error);
+      console.error('[DEBUG] Resend error:', error);
       alert("Failed to resend OTP: " + error.message);
     }
   }
 }
 
-console.log('[DEBUG] Initializing VerifyOtpManager...');
+console.log('[DEBUG] Creating VerifyOtpManager instance...');
 new VerifyOtpManager();
+console.log('[DEBUG] VerifyOtpManager created');

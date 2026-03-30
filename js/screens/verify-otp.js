@@ -55,14 +55,7 @@ class VerifyOtpManager {
   init() {
     console.log('[DEBUG] init() called');
     
-    const phoneDisplay = document.getElementById('phoneDisplay');
-    if (phoneDisplay) {
-      phoneDisplay.textContent = this.data.phone;
-      console.log('[DEBUG] phoneDisplay set to:', this.data.phone);
-    } else {
-      console.error('[DEBUG] phoneDisplay element not found!');
-    }
-    
+      
     const btnVerify = document.getElementById('btnVerify');
     const btnResend = document.getElementById('btnResend');
     

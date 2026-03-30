@@ -45,7 +45,7 @@ class VerifyOtpManager {
       console.error('[DEBUG] phone:', this.data.phone);
       console.error('[DEBUG] pinId:', this.data.pinId);
       alert('Session expired. Please start again.');
-      // DO NOT redirect - let user see the error
+      window.location.href = 'signup.html';
       return;
     }
     
@@ -127,16 +127,24 @@ class VerifyOtpManager {
       const userCredential = await signInWithCustomToken(auth, token);
       console.log('[DEBUG] signInWithCustomToken SUCCESS');
       console.log('[DEBUG] User UID:', userCredential.user?.uid);
-      console.log('[DEBUG] Auth currentUser:', auth.currentUser?.uid);
+      
+      // Wait for auth state to stabilize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('[DEBUG] Auth state stabilized');
       
       // Step 2: If signup, create user record
       if (this.data.isSignup) {
         console.log('[DEBUG] isSignup=true, calling createUserRecord()...');
-        await this.createUserRecord();
+        await this.createUserRecord(userCredential.user);
         console.log('[DEBUG] createUserRecord() completed');
+        
+        // Success - redirect to home
+        alert('Account created successfully!');
+        window.location.href = 'index.html';
       } else {
         console.log('[DEBUG] isSignup=false, login flow complete');
-        console.log('[DEBUG] Would redirect to index.html but BLOCKED');
+        // Login flow - redirect to home
+        window.location.href = 'index.html';
       }
       
       console.log('[DEBUG] ===== verifyOtp() COMPLETED SUCCESSFULLY =====');
@@ -154,37 +162,25 @@ class VerifyOtpManager {
     }
   }
 
-  async createUserRecord() {
-    console.log('[DEBUG] this.data contents:', {
-  phone: this.data.phone,
-  hashHandle: this.data.hashHandle,
-  firstName: this.data.firstName,
-  lastName: this.data.lastName,
-  country: this.data.country,
-  state: this.data.state,
-  kennel: this.data.kennel,
-  designation: this.data.designation
-});
-
-// Check for undefined values
-const required = ['phone', 'hashHandle', 'firstName', 'lastName', 'country', 'state', 'kennel', 'designation'];
-const missing = required.filter(field => !this.data[field]);
-if (missing.length > 0) {
-  console.error('[DEBUG] MISSING required fields:', missing);
-  throw new Error(`Missing required fields: ${missing.join(', ')}`);
-}
+  async createUserRecord(user) {
     console.log('[DEBUG] ===== createUserRecord() STARTED =====');
-    
-    const user = auth.currentUser;
-    console.log('[DEBUG] auth.currentUser:', user?.uid);
+    console.log('[DEBUG] User passed to function:', user?.uid);
     
     if (!user) {
-      console.error('[DEBUG] No current user!');
+      console.error('[DEBUG] No user passed to createUserRecord!');
       throw new Error("Authentication failed - no user");
     }
     
     const uid = user.uid;
     console.log('[DEBUG] UID:', uid);
+    
+    // Validate required data
+    const required = ['phone', 'hashHandle', 'firstName', 'lastName', 'country', 'state', 'kennel', 'designation'];
+    const missing = required.filter(field => !this.data[field]);
+    if (missing.length > 0) {
+      console.error('[DEBUG] MISSING required fields:', missing);
+      throw new Error(`Missing required fields: ${missing.join(', ')}`);
+    }
     
     // Create fake email from phone
     let cleanPhone = this.data.phone.replace(/\D/g, '');
@@ -196,11 +192,12 @@ if (missing.length > 0) {
     const fakeEmail = `user${cleanPhone}@h3global.app`;
     console.log('[DEBUG] fakeEmail:', fakeEmail);
     
-    const userRef = doc(db, "users", uid);
+    // FIXED: Correct document references (removed double doc())
     const phoneRef = doc(db, "phoneNumbers", this.data.phone);
+    const userRef = doc(db, "users", uid);
     
-    console.log('[DEBUG] userRef path:', userRef.path);
     console.log('[DEBUG] phoneRef path:', phoneRef.path);
+    console.log('[DEBUG] userRef path:', userRef.path);
     
     const userMap = {
       hashHandle: this.data.hashHandle,
@@ -261,6 +258,10 @@ if (missing.length > 0) {
         console.log('[DEBUG] Skipping designation (noTierRole)');
       }
       
+      // Step 5: Clear session storage
+      console.log('[DEBUG] Clearing sessionStorage...');
+      sessionStorage.removeItem('signupData');
+      
       console.log('[DEBUG] ===== ALL DOCUMENTS CREATED SUCCESSFULLY =====');
       
     } catch (error) {
@@ -270,12 +271,6 @@ if (missing.length > 0) {
       console.error('[DEBUG] Error message:', error.message);
       throw error;
     }
-    
-    // DO NOT clear sessionStorage or redirect - keep page alive for debugging
-    console.log('[DEBUG] SKIPPING sessionStorage.removeItem and redirect');
-    console.log('[DEBUG] Page will STAY HERE for debugging');
-    
-    alert('[DEBUG] Signup complete! Check console logs. Page will NOT redirect.');
   }
 
   async resendOtp() {

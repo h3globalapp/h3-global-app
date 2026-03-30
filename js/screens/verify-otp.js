@@ -1,38 +1,3 @@
-// ===== DEBUG MODE - BLOCK ALL REDIRECTS =====
-console.log('[DEBUG] ===== VERIFY OTP PAGE LOADED - REDIRECTS BLOCKED =====');
-
-// Set flag BEFORE any imports load
-window.DEBUG_BLOCK_REDIRECT = true;
-sessionStorage.setItem('DEBUG_BLOCK_REDIRECT', 'true');
-
-// Block navigation attempts without redefining href
-window.addEventListener('beforeunload', function(e) {
-  console.log('[DEBUG] Blocked navigation attempt');
-  e.preventDefault();
-  e.returnValue = 'Debug mode - leaving will lose logs';
-  return 'Debug mode - leaving will lose logs';
-});
-
-// Override navigation methods (these are safer than href)
-const originalAssign = window.location.assign;
-const originalReplace = window.location.replace;
-
-window.location.assign = function(url) {
-  console.log('[DEBUG] BLOCKED assign to:', url);
-  console.trace();
-  alert('BLOCKED redirect to: ' + url + '\nCheck console for stack trace');
-};
-
-window.location.replace = function(url) {
-  console.log('[DEBUG] BLOCKED replace to:', url);
-  console.trace();
-  alert('BLOCKED redirect to: ' + url + '\nCheck console for stack trace');
-};
-
-console.log('[DEBUG] Redirect blocking active');
-// ===== END DEBUG BLOCK =====
-
-
 // js/screens/verify-otp.js
 import { auth, db, functions } from '../firebase-config.js';
 import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";

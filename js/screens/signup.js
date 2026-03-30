@@ -1,3 +1,15 @@
+// Pre-check: Ensure Firebase is loaded before DOMContentLoaded
+console.log('signup.js loading...');
+console.log('Initial window.db:', !!window.db);
+console.log('Initial window.functions:', !!window.functions);
+
+// Helper to check Firebase readiness
+window.checkFirebaseReady = function() {
+  const ready = !!(window.db && window.functions);
+  console.log('Firebase ready check:', { db: !!window.db, functions: !!window.functions, ready });
+  return ready;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // Wait for Firebase to be ready
   if (!window.db) {
@@ -193,9 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
         els.modal.classList.add('hidden');
         document.getElementById('etPrefix').value = '';
         
-              // Create kennel request and temp kennel (matches Android logic)
+        // Create kennel request and temp kennel (matches Android logic)
         try {
-          const { addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+          const { addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
           
           // Get phone number from form
           const phone = document.getElementById('countryCodePicker').value + document.getElementById('etPhone').value.replace(/\D/g, '');
@@ -203,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // 1. Create kennelRequests document (matches Android queueOrCreateKennel)
           const request = {
             requesterUid: '',  // Will be empty during signup, filled later after OTP
-            requesterPhone: phone,  // ✅ ADD THIS - allows lookup before auth
+            requesterPhone: phone,  // Allows lookup before auth
             country: els.country.value,
             state: els.state.value,
             requestedName: rawName,
@@ -238,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadDesignations();
       };
 
-           // Canonical name helper (matches Android)
+      // Canonical name helper (matches Android)
       function canonicalKennelName(raw) {
         let s = raw.trim().toLowerCase();
         s = s.replace(/\bh3\b/g, 'hash');
@@ -268,8 +280,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // Form submit - ALL users use Termii
       els.form.onsubmit = async (e) => {
         e.preventDefault();
-		// ADD THIS LOG - Line ~200
-  console.log('1. Form submitted - starting signup flow');
+        console.log('1. Form submitted - starting signup flow');
+        
+        // Check if Firebase Functions is available
+        if (!window.functions) {
+          console.error('Firebase Functions not available on window object!');
+          alert('System error: Firebase not properly loaded. Please refresh the page.');
+          return;
+        }
+        console.log('1a. Firebase Functions available:', !!window.functions);
+        
         els.btnSignup.disabled = true;
         els.btnSignup.textContent = 'Sending OTP...';
         
@@ -284,11 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
           kennel: els.kennel.value,
           designation: els.designation.value
         };
-		
-		  // ADD THIS LOG - Line ~215
-  console.log('2. Phone number collected:', signupData.phone);
         
-               // Validate
+        console.log('2. Phone number collected:', signupData.phone);
+        console.log('2a. Full signup data:', signupData);
+        
+        // Validate
         if (!signupData.hashHandle || !signupData.firstName || !signupData.lastName || 
             !signupData.phone || !signupData.country || !signupData.state || 
             !signupData.kennel || !signupData.designation) {
@@ -297,16 +317,17 @@ document.addEventListener('DOMContentLoaded', () => {
           els.btnSignup.textContent = 'CREATE ACCOUNT';
           return;
         }
-		  // ADD THIS LOG - Line ~227
-  console.log('3. All fields valid, checking if phone exists...');
         
-              // Check if phone number already exists
+        console.log('3. All fields valid, checking if phone exists...');
+        
+        // Check if phone number already exists
         try {
-          const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ');
+          const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
           const phoneRef = doc(window.db, 'phoneNumbers', signupData.phone);
           const phoneDoc = await getDoc(phoneRef);
           
           if (phoneDoc.exists()) {
+            console.log('3a. Phone already exists, showing dialog');
             // Show custom dialog with Login Instead button
             const existingUserDialog = document.createElement('div');
             existingUserDialog.style.cssText = `
@@ -371,18 +392,15 @@ document.addEventListener('DOMContentLoaded', () => {
               existingUserDialog.remove();
               els.btnSignup.disabled = false;
               els.btnSignup.textContent = 'CREATE ACCOUNT';
-              // Clear phone field so they can try different number
               document.getElementById('etPhone').value = '';
               document.getElementById('etPhone').focus();
             };
             
             existingUserDialog.querySelector('#btnGoLogin').onclick = () => {
-              // Store phone for login page to pre-fill
               sessionStorage.setItem('pendingLoginPhone', signupData.phone);
               window.location.href = 'login.html';
             };
             
-            // Close on overlay click
             existingUserDialog.onclick = (e) => {
               if (e.target === existingUserDialog) {
                 existingUserDialog.remove();
@@ -393,48 +411,76 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return;
           }
+          console.log('3b. Phone number is new, proceeding to OTP');
         } catch (err) {
-          console.error('Error checking phone:', err);
-          // Continue anyway - let verify-otp catch it
+          console.error('Error checking phone (continuing anyway):', err);
         }
         
         try {
-          // Import Firebase Functions
-          const { httpsCallable } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js");
-          const { functions } = await import('../firebase-config.js');
+          console.log('4. Importing Firebase Functions...');
+          // Use the global functions object instead of dynamic import
+          const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js');
+          console.log('4a. httpsCallable imported:', !!httpsCallable);
+          console.log('4b. window.functions:', !!window.functions);
           
-          // Step 1: Send OTP via Termii (ALL users)
-          const sendOtpTermii = httpsCallable(functions, 'sendOtpTermii');
+          console.log('5. Sending OTP via Termii...');
+          const sendOtpTermii = httpsCallable(window.functions, 'sendOtpTermii');
           const result = await sendOtpTermii({
             phone: signupData.phone,
             firstName: signupData.firstName,
             lastName: signupData.lastName
           });
           
-          const { pin_id } = result.data;
-          if (!pin_id) throw new Error('Failed to get PIN ID from Termii');
+          console.log('6. OTP send result:', result.data);
           
-// BEFORE navigating, save data
-const verifyData = {
-  ...signupData,
-  pinId: pin_id,
-  isFirebase: false,
-  isSignup: true
-};
-
-// Save to both storages
-try {
-  localStorage.setItem('signupData', JSON.stringify(verifyData));
-  sessionStorage.setItem('signupData', JSON.stringify(verifyData));
-} catch(e) {
-  console.log('Storage error:', e);
-}
-
-// Simple navigation - no URL params
-window.location.href = 'verify-otp.html';
+          const { pin_id } = result.data;
+          if (!pin_id) {
+            throw new Error('Failed to get PIN ID from Termii');
+          }
+          console.log('6a. PIN ID received:', pin_id);
+          
+          // Prepare data for verification page
+          const verifyData = {
+            ...signupData,
+            pinId: pin_id,
+            isFirebase: false,
+            isSignup: true
+          };
+          
+          console.log('7. Saving data to storage:', verifyData);
+          
+          // Save to both storages with error handling
+          let storageSuccess = false;
+          try {
+            localStorage.setItem('signupData', JSON.stringify(verifyData));
+            console.log('7a. Saved to localStorage');
+            storageSuccess = true;
+          } catch(e) {
+            console.error('7a. localStorage failed:', e);
+          }
+          
+          try {
+            sessionStorage.setItem('signupData', JSON.stringify(verifyData));
+            console.log('7b. Saved to sessionStorage');
+            storageSuccess = true;
+          } catch(e) {
+            console.error('7b. sessionStorage failed:', e);
+          }
+          
+          if (!storageSuccess) {
+            throw new Error('Could not save session data. Storage may be disabled.');
+          }
+          
+          console.log('8. Navigating to verify-otp.html...');
+          window.location.href = 'verify-otp.html';
           
         } catch (error) {
-          console.error('Signup error:', error);
+          console.error('=== SIGNUP ERROR ===');
+          console.error('Error type:', error.name);
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+          console.error('Full error:', error);
+          
           alert('Failed to send OTP: ' + error.message);
           els.btnSignup.disabled = false;
           els.btnSignup.textContent = 'CREATE ACCOUNT';

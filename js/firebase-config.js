@@ -140,15 +140,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   
-  if (!user && !publicPages.includes(currentPage)) {
-    window.location.href = 'login.html';
-    return;
-  }
-  
-  if (user && publicPages.includes(currentPage)) {
-    window.location.href = 'index.html';
-    return;
-  }
+
   
   if (user) {
     setTimeout(async () => {

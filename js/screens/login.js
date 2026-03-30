@@ -110,7 +110,7 @@ class LoginManager {
       
       // Show OTP input
       this.showOtpSection();
-      this.showToast("OTP sent to your phone", "success");
+    //  this.showToast("OTP sent to your phone", "success");
       
     } catch (error) {
       console.error("Failed to send OTP:", error);
@@ -248,15 +248,9 @@ const verifyOtpHybrid = httpsCallable(functions, 'verifyOtpHybrid'); // Use new 
   }
 
   showToast(message, type = 'info') {
-  // Non-blocking toast that auto-dismisses
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:24px;z-index:1000;';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  
-  setTimeout(() => toast.remove(), 2000);
-}
+    // Replace with proper toast UI
+    alert(message);
+  }
   
   
 }

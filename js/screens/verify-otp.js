@@ -4,34 +4,6 @@ import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1
 import { doc, setDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
-// BLOCK ALL REDIRECTS FOR DEBUGGING
-console.log('[DEBUG] ===== VERIFY OTP PAGE LOADED =====');
-console.log('[DEBUG] Blocking all redirects for debugging');
-
-// Override window.location methods to prevent redirects
-const originalHref = window.location.href;
-Object.defineProperty(window.location, 'href', {
-  set: function(url) {
-    console.log('[DEBUG] BLOCKED redirect to:', url);
-    console.log('[DEBUG] Stack trace:', new Error().stack);
-    alert('[DEBUG] Redirect blocked to: ' + url + '\nCheck console for logs');
-    // Don't actually redirect
-  },
-  get: function() {
-    return originalHref;
-  }
-});
-
-// Also block replace and assign
-window.location.replace = function(url) {
-  console.log('[DEBUG] BLOCKED location.replace to:', url);
-  alert('[DEBUG] Redirect blocked (replace) to: ' + url);
-};
-window.location.assign = function(url) {
-  console.log('[DEBUG] BLOCKED location.assign to:', url);
-  alert('[DEBUG] Redirect blocked (assign) to: ' + url);
-};
-
 // Temp kennel name generator
 function tempKennelName(requested) {
   let hash = 0;

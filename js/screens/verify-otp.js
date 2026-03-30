@@ -218,6 +218,24 @@ class VerifyOtpManager {
   }
 
   async createUserRecord() {
+    console.log('[DEBUG] this.data contents:', {
+  phone: this.data.phone,
+  hashHandle: this.data.hashHandle,
+  firstName: this.data.firstName,
+  lastName: this.data.lastName,
+  country: this.data.country,
+  state: this.data.state,
+  kennel: this.data.kennel,
+  designation: this.data.designation
+});
+
+// Check for undefined values
+const required = ['phone', 'hashHandle', 'firstName', 'lastName', 'country', 'state', 'kennel', 'designation'];
+const missing = required.filter(field => !this.data[field]);
+if (missing.length > 0) {
+  console.error('[DEBUG] MISSING required fields:', missing);
+  throw new Error(`Missing required fields: ${missing.join(', ')}`);
+}
     console.log('[DEBUG] ===== createUserRecord() STARTED =====');
     
     const user = auth.currentUser;
@@ -242,7 +260,7 @@ class VerifyOtpManager {
     console.log('[DEBUG] fakeEmail:', fakeEmail);
     
     const userRef = doc(db, "users", uid);
-    const phoneRef = doc(doc(db, "phoneNumbers", this.data.phone));
+    const phoneRef = doc(db, "phoneNumbers", this.data.phone);
     
     console.log('[DEBUG] userRef path:', userRef.path);
     console.log('[DEBUG] phoneRef path:', phoneRef.path);

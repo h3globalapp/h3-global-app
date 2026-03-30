@@ -7,9 +7,9 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js ";
-import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js ";
-import { getFunctions } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js ";
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // Capacitor detection
 const isCapacitor = typeof window !== 'undefined' && 
@@ -89,7 +89,7 @@ export async function initWebPushNotifications(userId) {
   if (!('serviceWorker' in navigator)) return null;
 
   try {
-    const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js ");
+    const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js");
     
     const msg = getMessaging(app);
     messaging = msg; // Set the exported variable
@@ -121,12 +121,12 @@ export async function initWebPushNotifications(userId) {
     });
 
     return token;
-  }  catch (error) {
+  } catch (error) {
+    console.error('Web push error:', error);
     return null;
   }
 }
 
-// ==================== AUTH STATE ====================
 // ==================== AUTH STATE ====================
 onAuthStateChanged(auth, async (user) => {
   const currentPage = window.location.pathname.split('/').pop();

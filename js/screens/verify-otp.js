@@ -21,41 +21,104 @@ class VerifyOtpManager {
   constructor() {
     console.log('[DEBUG] VerifyOtpManager constructor started');
     
-    const sessionData = JSON.parse(sessionStorage.getItem('signupData') || '{}');
-    console.log('[DEBUG] sessionData loaded:', sessionData);
+    // Try multiple sources for signup data (mobile compatibility)
+    let signupData = this.getSignupData();
     
     this.data = {
-      phone: sessionData.phone,
-      pinId: sessionData.pinId,
-      hashHandle: sessionData.hashHandle,
-      firstName: sessionData.firstName,
-      lastName: sessionData.lastName,
-      country: sessionData.country,
-      state: sessionData.state,
-      kennel: sessionData.kennel,
-      designation: sessionData.designation,
-      isFirebase: sessionData.isFirebase || false,
-      isSignup: sessionData.isSignup || false
+      phone: signupData.phone,
+      pinId: signupData.pinId,
+      hashHandle: signupData.hashHandle,
+      firstName: signupData.firstName,
+      lastName: signupData.lastName,
+      country: signupData.country,
+      state: signupData.state,
+      kennel: signupData.kennel,
+      designation: signupData.designation,
+      isFirebase: signupData.isFirebase || false,
+      isSignup: signupData.isSignup || false
     };
 
     console.log('[DEBUG] this.data prepared:', this.data);
 
     if (!this.data.phone || !this.data.pinId) {
       console.error('[DEBUG] MISSING phone or pinId!');
-      console.error('[DEBUG] phone:', this.data.phone);
-      console.error('[DEBUG] pinId:', this.data.pinId);
       alert('Session expired. Please start again.');
       window.location.href = 'signup.html';
       return;
     }
     
+    // Re-save to localStorage to ensure it's there for refreshes
+    this.saveSignupData(this.data);
+    
     this.init();
+  }
+  
+  // Get data from localStorage, sessionStorage, or URL params
+  getSignupData() {
+    let data = null;
+    
+    // 1. Try localStorage first (most reliable on mobile)
+    try {
+      const ls = localStorage.getItem('signupData');
+      if (ls) {
+        data = JSON.parse(ls);
+        console.log('[DEBUG] Data from localStorage:', data);
+      }
+    } catch(e) {
+      console.log('[DEBUG] localStorage error:', e);
+    }
+    
+    // 2. Fallback to sessionStorage
+    if (!data) {
+      try {
+        const ss = sessionStorage.getItem('signupData');
+        if (ss) {
+          data = JSON.parse(ss);
+          console.log('[DEBUG] Data from sessionStorage:', data);
+        }
+      } catch(e) {
+        console.log('[DEBUG] sessionStorage error:', e);
+      }
+    }
+    
+    // 3. Fallback to URL parameters
+    if (!data) {
+      const url = new URLSearchParams(window.location.search);
+      const phone = url.get('phone');
+      const pinId = url.get('pinId');
+      if (phone && pinId) {
+        data = {
+          phone: phone,
+          pinId: pinId,
+          hashHandle: url.get('hashHandle'),
+          firstName: url.get('firstName'),
+          lastName: url.get('lastName'),
+          country: url.get('country'),
+          state: url.get('state'),
+          kennel: url.get('kennel'),
+          designation: url.get('designation'),
+          isSignup: true
+        };
+        console.log('[DEBUG] Data from URL params:', data);
+      }
+    }
+    
+    return data || {};
+  }
+  
+  // Save to localStorage for persistence
+  saveSignupData(data) {
+    try {
+      localStorage.setItem('signupData', JSON.stringify(data));
+      console.log('[DEBUG] Saved to localStorage');
+    } catch(e) {
+      console.error('[DEBUG] Failed to save to localStorage:', e);
+    }
   }
 
   init() {
     console.log('[DEBUG] init() called');
     
-      
     const btnVerify = document.getElementById('btnVerify');
     const btnResend = document.getElementById('btnResend');
     
@@ -103,15 +166,11 @@ class VerifyOtpManager {
       });
       
       console.log('[DEBUG] verifyOtpHybrid SUCCESS');
-      console.log('[DEBUG] Full result:', result);
-      console.log('[DEBUG] result.data:', result.data);
       
       const { token, isExistingUser } = result.data;
-      console.log('[DEBUG] token received:', token ? 'YES (length: ' + token.length + ')' : 'NO');
-      console.log('[DEBUG] isExistingUser:', isExistingUser);
+      console.log('[DEBUG] token received:', token ? 'YES' : 'NO');
       
       if (!token) {
-        console.error('[DEBUG] NO TOKEN in result!');
         throw new Error("No authentication token received");
       }
       
@@ -119,11 +178,9 @@ class VerifyOtpManager {
       console.log('[DEBUG] Calling signInWithCustomToken...');
       const userCredential = await signInWithCustomToken(auth, token);
       console.log('[DEBUG] signInWithCustomToken SUCCESS');
-      console.log('[DEBUG] User UID:', userCredential.user?.uid);
       
       // Wait for auth state to stabilize
       await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('[DEBUG] Auth state stabilized');
       
       // Step 2: If signup, create user record
       if (this.data.isSignup) {
@@ -131,24 +188,21 @@ class VerifyOtpManager {
         await this.createUserRecord(userCredential.user);
         console.log('[DEBUG] createUserRecord() completed');
         
-        // Success - redirect to home
+        // Clear storage and redirect
+        localStorage.removeItem('signupData');
+        sessionStorage.removeItem('signupData');
         alert('Account created successfully!');
         window.location.href = 'index.html';
       } else {
         console.log('[DEBUG] isSignup=false, login flow complete');
-        // Login flow - redirect to home
+        localStorage.removeItem('signupData');
+        sessionStorage.removeItem('signupData');
         window.location.href = 'index.html';
       }
       
-      console.log('[DEBUG] ===== verifyOtp() COMPLETED SUCCESSFULLY =====');
-      
     } catch (error) {
       console.error('[DEBUG] ===== verifyOtp() ERROR =====');
-      console.error('[DEBUG] Error object:', error);
-      console.error('[DEBUG] Error message:', error.message);
-      console.error('[DEBUG] Error code:', error.code);
-      console.error('[DEBUG] Error stack:', error.stack);
-      
+      console.error('[DEBUG] Error:', error);
       alert('Error: ' + error.message);
       btn.disabled = false;
       btn.textContent = 'VERIFY';
@@ -157,22 +211,20 @@ class VerifyOtpManager {
 
   async createUserRecord(user) {
     console.log('[DEBUG] ===== createUserRecord() STARTED =====');
-    console.log('[DEBUG] User passed to function:', user?.uid);
+    console.log('[DEBUG] User UID:', user?.uid);
     
     if (!user) {
-      console.error('[DEBUG] No user passed to createUserRecord!');
       throw new Error("Authentication failed - no user");
     }
     
     const uid = user.uid;
-    console.log('[DEBUG] UID:', uid);
     
     // Validate required data
     const required = ['phone', 'hashHandle', 'firstName', 'lastName', 'country', 'state', 'kennel', 'designation'];
     const missing = required.filter(field => !this.data[field]);
     if (missing.length > 0) {
-      console.error('[DEBUG] MISSING required fields:', missing);
-      throw new Error(`Missing required fields: ${missing.join(', ')}`);
+      console.error('[DEBUG] MISSING fields:', missing);
+      throw new Error(`Missing: ${missing.join(', ')}`);
     }
     
     // Create fake email from phone
@@ -183,14 +235,10 @@ class VerifyOtpManager {
       cleanPhone = cleanPhone.substring(1);
     }
     const fakeEmail = `user${cleanPhone}@h3global.app`;
-    console.log('[DEBUG] fakeEmail:', fakeEmail);
     
-    // FIXED: Correct document references (removed double doc())
+    // Document references
     const phoneRef = doc(db, "phoneNumbers", this.data.phone);
     const userRef = doc(db, "users", uid);
-    
-    console.log('[DEBUG] phoneRef path:', phoneRef.path);
-    console.log('[DEBUG] userRef path:', userRef.path);
     
     const userMap = {
       hashHandle: this.data.hashHandle,
@@ -214,54 +262,35 @@ class VerifyOtpManager {
       userMap.role = "Tier 2";
     }
     
-    console.log('[DEBUG] userMap prepared:', JSON.stringify(userMap, null, 2));
-    
     try {
-      // Step 1: Check if phone exists
-      console.log('[DEBUG] Checking phone existence...');
+      // Check if phone exists
       const phoneCheck = await getDoc(phoneRef);
-      console.log('[DEBUG] phoneCheck.exists():', phoneCheck.exists());
-      
       if (phoneCheck.exists()) {
-        console.error('[DEBUG] Phone already exists!');
-        throw new Error("This phone number is already registered. Please login instead.");
+        throw new Error("Phone already registered. Please login.");
       }
       
-      // Step 2: Create phone document
-      console.log('[DEBUG] Creating phone document...');
+      // Create documents
       await setDoc(phoneRef, { createdAt: serverTimestamp() });
-      console.log('[DEBUG] Phone document CREATED successfully');
+      console.log('[DEBUG] Phone document created');
       
-      // Step 3: Create user document
-      console.log('[DEBUG] Creating user document...');
       await setDoc(userRef, userMap);
-      console.log('[DEBUG] User document CREATED successfully');
+      console.log('[DEBUG] User document created');
       
-      // Step 4: Handle designation
+      // Handle designation
       const noTierRoles = ['Hasher', 'Member', 'Visitor'];
       if (!noTierRoles.includes(this.data.designation)) {
-        console.log('[DEBUG] Creating designation...');
         const designationPath = this.data.designation === "Admin" ? "Admin" : this.data.kennel;
         const designationRef = doc(db, "designations", designationPath);
         await setDoc(designationRef, {
           [this.data.designation]: this.data.phone
         }, { merge: true });
         console.log('[DEBUG] Designation created');
-      } else {
-        console.log('[DEBUG] Skipping designation (noTierRole)');
       }
       
-      // Step 5: Clear session storage
-      console.log('[DEBUG] Clearing sessionStorage...');
-      sessionStorage.removeItem('signupData');
-      
-      console.log('[DEBUG] ===== ALL DOCUMENTS CREATED SUCCESSFULLY =====');
+      console.log('[DEBUG] ===== ALL DOCUMENTS CREATED =====');
       
     } catch (error) {
-      console.error('[DEBUG] ===== createUserRecord() ERROR =====');
-      console.error('[DEBUG] Error:', error);
-      console.error('[DEBUG] Error code:', error.code);
-      console.error('[DEBUG] Error message:', error.message);
+      console.error('[DEBUG] createUserRecord error:', error);
       throw error;
     }
   }
@@ -277,17 +306,17 @@ class VerifyOtpManager {
       });
       
       this.data.pinId = result.data.pin_id;
-      sessionStorage.setItem('signupData', JSON.stringify(this.data));
+      this.saveSignupData(this.data);
+      
       console.log('[DEBUG] New OTP sent, pinId:', this.data.pinId);
       alert("New OTP sent!");
       
     } catch (error) {
       console.error('[DEBUG] Resend error:', error);
-      alert("Failed to resend OTP: " + error.message);
+      alert("Failed to resend: " + error.message);
     }
   }
 }
 
-console.log('[DEBUG] Creating VerifyOtpManager instance...');
+console.log('[DEBUG] Creating VerifyOtpManager...');
 new VerifyOtpManager();
-console.log('[DEBUG] VerifyOtpManager created');

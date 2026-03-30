@@ -414,28 +414,34 @@ document.addEventListener('DOMContentLoaded', () => {
           const { pin_id } = result.data;
           if (!pin_id) throw new Error('Failed to get PIN ID from Termii');
           
-                   // Step 2: Store ALL signup data in sessionStorage
-          const verifyData = {
-            ...signupData,
-            pinId: pin_id,           // From Termii
-            isFirebase: false,       // ALL users use Termii
-            isSignup: true,          // Flag to know this is signup not login
-            otpSentAt: Date.now()    // Timestamp to prevent stale data
-          };
-          
-          // Clear any old data first to prevent conflicts
-          sessionStorage.removeItem('signupData');
-          sessionStorage.removeItem('loginData');
-          
-          // Store new data
-          sessionStorage.setItem('signupData', JSON.stringify(verifyData));
-          console.log('Stored signup data, navigating to verify-otp...');
-          
-        
-          
-          // Step 3: Navigate to verify OTP page
-      
-window.location.href = 'verify-otp.html';
+ // Step 2: Store ALL signup data in BOTH localStorage and sessionStorage
+const verifyData = {
+  ...signupData,
+  pinId: pin_id,           // From Termii
+  isFirebase: false,       // ALL users use Termii
+  isSignup: true,          // Flag to know this is signup not login
+  otpSentAt: Date.now()    // Timestamp to prevent stale data
+};
+
+// Clear any old data first
+localStorage.removeItem('signupData');
+localStorage.removeItem('loginData');
+sessionStorage.removeItem('signupData');
+sessionStorage.removeItem('loginData');
+
+// Store in BOTH for maximum compatibility
+localStorage.setItem('signupData', JSON.stringify(verifyData));
+sessionStorage.setItem('signupData', JSON.stringify(verifyData));
+console.log('Stored signup data in localStorage and sessionStorage');
+
+// Step 3: Navigate to verify OTP page
+// Add URL parameters as backup for mobile
+const params = new URLSearchParams({
+  phone: signupData.phone,
+  pinId: pin_id
+}).toString();
+
+window.location.href = `verify-otp.html?${params}`;
           
         } catch (error) {
           console.error('Signup error:', error);

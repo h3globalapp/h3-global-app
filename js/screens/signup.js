@@ -414,34 +414,24 @@ document.addEventListener('DOMContentLoaded', () => {
           const { pin_id } = result.data;
           if (!pin_id) throw new Error('Failed to get PIN ID from Termii');
           
- // Step 2: Store ALL signup data in BOTH localStorage and sessionStorage
+// BEFORE navigating, save data
 const verifyData = {
   ...signupData,
-  pinId: pin_id,           // From Termii
-  isFirebase: false,       // ALL users use Termii
-  isSignup: true,          // Flag to know this is signup not login
-  otpSentAt: Date.now()    // Timestamp to prevent stale data
+  pinId: pin_id,
+  isFirebase: false,
+  isSignup: true
 };
 
-// Clear any old data first
-localStorage.removeItem('signupData');
-localStorage.removeItem('loginData');
-sessionStorage.removeItem('signupData');
-sessionStorage.removeItem('loginData');
+// Save to both storages
+try {
+  localStorage.setItem('signupData', JSON.stringify(verifyData));
+  sessionStorage.setItem('signupData', JSON.stringify(verifyData));
+} catch(e) {
+  console.log('Storage error:', e);
+}
 
-// Store in BOTH for maximum compatibility
-localStorage.setItem('signupData', JSON.stringify(verifyData));
-sessionStorage.setItem('signupData', JSON.stringify(verifyData));
-console.log('Stored signup data in localStorage and sessionStorage');
-
-// Step 3: Navigate to verify OTP page
-// Add URL parameters as backup for mobile
-const params = new URLSearchParams({
-  phone: signupData.phone,
-  pinId: pin_id
-}).toString();
-
-window.location.href = `verify-otp.html?${params}`;
+// Simple navigation - no URL params
+window.location.href = 'verify-otp.html';
           
         } catch (error) {
           console.error('Signup error:', error);

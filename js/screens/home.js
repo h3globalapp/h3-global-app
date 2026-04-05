@@ -1164,7 +1164,7 @@ viewProfileImage() {
 updateRoleBasedVisibility() {
   const role = this.userRole;
   const isTier1 = role === 'Tier 1';
-  const isTier2 = role === 'Tier 2';
+const isTier2 = role === 'Tier 2' || hasTier2InOtherKennels;  // ← FIXED
   const show = isTier1 || isTier2;
   
   if (!show) {

@@ -151,6 +151,22 @@ this.currentKennelWallet = null; // Currently selected kennel
     });
   }
 
+	// ADD THIS NEW METHOD to check for Tier 2 across all kennels
+hasTier2Access() {
+  // Check main role
+  if (this.userRole === 'Tier 2' || this.userRole === 'Tier 1') {
+    return true;
+  }
+  // Check otherKennels
+  const others = this.userData?.otherKennels || [];
+  return others.some(k => k.role === 'Tier 2');
+}
+
+// ADD THIS NEW METHOD to check for Tier 1 access
+hasTier1Access() {
+  return this.userRole === 'Tier 1';
+}
+
   
 
   playSound(type, priority = false) {
@@ -1161,10 +1177,11 @@ viewProfileImage() {
     }
   }
 
+	
+
 updateRoleBasedVisibility() {
-  const role = this.userRole;
-  const isTier1 = role === 'Tier 1';
-const isTier2 = role === 'Tier 2' || hasTier2InOtherKennels;  // ← FIXED
+  const isTier1 = this.hasTier1Access();
+  const isTier2 = this.hasTier2Access(); // Uses new helper
   const show = isTier1 || isTier2;
   
   if (!show) {
@@ -1238,7 +1255,7 @@ const isTier2 = role === 'Tier 2' || hasTier2InOtherKennels;  // ← FIXED
     
     // Payment requests listener (kennel-agnostic, uses user's kennel field)
     // For Tier 2, we need to check if ANY of their kennels have pending payments
-    if (this.userRole === 'Tier 1' || this.userRole === 'Tier 2') {
+   if (this.hasTier1Access() || this.hasTier2Access()) {
       const payReqQuery = query(
         collection(db, 'paymentRequests'),
         where('type', '==', 'event-payment'),
@@ -4787,13 +4804,14 @@ async requestGeolocationPermission() {
   
     // NEW: Kennel Wallet Methods
   
-  updateKennelWalletVisibility() {
-    console.log('=== DEBUG: updateKennelWalletVisibility ===');
-    console.log('userRole:', this.userRole);
-    console.log('userData?.country:', this.userData?.country);
-    
-    const isTier1 = this.userRole === 'Tier 1';
-    const isTier2 = this.userRole === 'Tier 2';
+updateKennelWalletVisibility() {
+  console.log('=== DEBUG: updateKennelWalletVisibility ===');
+  console.log('userRole:', this.userRole);
+  console.log('hasTier2Access:', this.hasTier2Access());
+  console.log('userData?.country:', this.userData?.country);
+  
+  const isTier1 = this.hasTier1Access();
+  const isTier2 = this.hasTier2Access();
     const country = this.userData?.country;
     
     const showKennelWallet = (isTier1 || isTier2) && country === 'Nigeria';

@@ -4811,7 +4811,7 @@ updateKennelWalletVisibility() {
   var isTier1 = this.userRole === 'Tier 1';
   var isTier2 = this.userRole === 'Tier 2';
   
-  // FIX: Check if user has Tier 2 in any otherKennel (ES5 compatible)
+  // Check if user has Tier 2 in any otherKennel (ES5 compatible)
   var hasTier2InOtherKennels = false;
   if (this.userData && this.userData.otherKennels && Array.isArray(this.userData.otherKennels)) {
     for (var i = 0; i < this.userData.otherKennels.length; i++) {
@@ -4840,17 +4840,38 @@ updateKennelWalletVisibility() {
   
   var adminKennels = [];
   
-  if (effectiveIsTier2) {
-    adminKennels = this.getAdminKennels();
-  } else if (isTier1) {
-    adminKennels = [{
+  // FIX: Tier 1 gets default kennel PLUS any Tier 2 kennels from otherKennels
+  if (isTier1) {
+    // Add default kennel first
+    adminKennels.push({
       kennelPath: 'locations/' + this.userCountry + '/states/' + this.userState + '/kennels/' + this.userKennel,
       kennelName: this.userKennel,
       country: this.userCountry,
       state: this.userState,
       designation: (this.userData && this.userData.designation) ? this.userData.designation : 'Admin',
       isDefault: true
-    }];
+    });
+    
+    // Also add any Tier 2 kennels from otherKennels (avoiding duplicates)
+    if (hasTier2InOtherKennels) {
+      var tier2Kennels = this.getAdminKennels();
+      for (var j = 0; j < tier2Kennels.length; j++) {
+        var kennel = tier2Kennels[j];
+        var exists = false;
+        for (var k = 0; k < adminKennels.length; k++) {
+          if (adminKennels[k].kennelPath === kennel.kennelPath) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          adminKennels.push(kennel);
+        }
+      }
+    }
+  } else if (effectiveIsTier2) {
+    // Pure Tier 2 (no Tier 1) - only get Tier 2 kennels
+    adminKennels = this.getAdminKennels();
   }
   
   console.log('adminKennels:', adminKennels);
@@ -4859,6 +4880,44 @@ updateKennelWalletVisibility() {
     console.log('No admin kennels found, hiding');
     this.els.kennelWalletSection.style.display = 'none';
     return;
+  }
+  
+  // Rest of the method remains unchanged...
+  // (setup kennel selector and load wallet)
+    
+    // Setup kennel selector if multiple kennels
+    const kennelSelect = this.els.selKennelWallet;
+    if (adminKennels.length > 1) {
+      kennelSelect.style.display = 'inline-block';
+      kennelSelect.innerHTML = '<option value="">Select Kennel</option>';
+      
+      adminKennels.forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k.kennelPath;
+        opt.textContent = k.kennelName;
+        kennelSelect.appendChild(opt);
+      });
+      
+      // Auto-select first kennel
+      if (!kennelSelect.value && adminKennels.length > 0) {
+        kennelSelect.value = adminKennels[0].kennelPath;
+        this.loadKennelWallet(adminKennels[0].kennelPath);
+      }
+      
+      // Change handler
+      kennelSelect.onchange = () => {
+        if (kennelSelect.value) {
+          this.loadKennelWallet(kennelSelect.value);
+        }
+      };
+    } else {
+      kennelSelect.style.display = 'none';
+      // Single kennel - auto load
+      this.loadKennelWallet(adminKennels[0].kennelPath);
+    }
+    
+    // Click handler to open dialog
+    this.els.tvKennelWalletBalance.onclick = () => this.showKennelWalletDialog();
   }
   
   // Rest of the method continues unchanged...

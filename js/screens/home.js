@@ -4922,41 +4922,7 @@ updateKennelWalletVisibility() {
   
   // Rest of the method continues unchanged...
   // (setup kennel selector and load wallet)
-    
-    // Setup kennel selector if multiple kennels
-    const kennelSelect = this.els.selKennelWallet;
-    if (adminKennels.length > 1) {
-      kennelSelect.style.display = 'inline-block';
-      kennelSelect.innerHTML = '<option value="">Select Kennel</option>';
-      
-      adminKennels.forEach(k => {
-        const opt = document.createElement('option');
-        opt.value = k.kennelPath;
-        opt.textContent = k.kennelName;
-        kennelSelect.appendChild(opt);
-      });
-      
-      // Auto-select first kennel
-      if (!kennelSelect.value && adminKennels.length > 0) {
-        kennelSelect.value = adminKennels[0].kennelPath;
-        this.loadKennelWallet(adminKennels[0].kennelPath);
-      }
-      
-      // Change handler
-      kennelSelect.onchange = () => {
-        if (kennelSelect.value) {
-          this.loadKennelWallet(kennelSelect.value);
-        }
-      };
-    } else {
-      kennelSelect.style.display = 'none';
-      // Single kennel - auto load
-      this.loadKennelWallet(adminKennels[0].kennelPath);
-    }
-    
-    // Click handler to open dialog
-    this.els.tvKennelWalletBalance.onclick = () => this.showKennelWalletDialog();
-  }
+
 
   async loadKennelWallet(kennelPath) {
     try {

@@ -1162,11 +1162,10 @@ viewProfileImage() {
   }
 
 updateRoleBasedVisibility() {
-  const role = this.userRole;
-  const isTier1 = role === 'Tier 1';
-  const isTier2 = role === 'Tier 2';
+  var role = this.userRole;
+  var isTier1 = role === 'Tier 1';
+  var isTier2 = role === 'Tier 2';
   
-  // FIX: Check if user has Tier 2 in any otherKennel (ES5 compatible)
   var hasTier2InOtherKennels = false;
   if (this.userData && this.userData.otherKennels && Array.isArray(this.userData.otherKennels)) {
     for (var i = 0; i < this.userData.otherKennels.length; i++) {
@@ -1215,8 +1214,11 @@ updateRoleBasedVisibility() {
   }
   
   this.updateKennelWalletVisibility();
-}
-  
+}  // ← Function ends here - NOTHING AFTER THIS BRACE!
+
+// NEXT FUNCTION STARTS HERE (like setupEventListeners or whatever)  
+    
+
   startUnreadListeners() {
     if (!this.currentUser) return;
     
@@ -4796,73 +4798,52 @@ async requestGeolocationPermission() {
   
     // NEW: Kennel Wallet Methods
   
-updateKennelWalletVisibility() {
-  console.log('=== DEBUG: updateKennelWalletVisibility ===');
-  console.log('userRole:', this.userRole);
-  
-  var userCountry = '';
-  if (this.userData && this.userData.country) {
-    userCountry = this.userData.country;
-  }
-  console.log('userData?.country:', userCountry);
-  
-  var isTier1 = this.userRole === 'Tier 1';
-  var isTier2 = this.userRole === 'Tier 2';
-  
-  // FIX: Check if user has Tier 2 in any otherKennel (ES5 compatible)
-  var hasTier2InOtherKennels = false;
-  if (this.userData && this.userData.otherKennels && Array.isArray(this.userData.otherKennels)) {
-    for (var i = 0; i < this.userData.otherKennels.length; i++) {
-      if (this.userData.otherKennels[i].role === 'Tier 2') {
-        hasTier2InOtherKennels = true;
-        break;
-      }
-    }
-  }
-  
-  var effectiveIsTier2 = isTier2 || hasTier2InOtherKennels;
-  var country = userCountry;
-  
-  var     const kennelSelect = this.els.selKennelWallet; = (isTier1 || effectiveIsTier2) && country === 'Nigeria';
-  
-  if (!    const kennelSelect = this.els.selKennelWallet; || !this.els.kennelWalletSection) {
-    console.log('HIDING kennel wallet. isTier1:', isTier1, 'effectiveIsTier2:', effectiveIsTier2, 'country:', country);
-    if (this.els.kennelWalletSection) {
-      this.els.kennelWalletSection.style.display = 'none';
-    }
-    return;
-  }
-  
-  console.log('SHOWING kennel wallet');
-  this.els.kennelWalletSection.style.display = 'flex';
-  
-  var adminKennels = [];
-  
-  if (effectiveIsTier2) {
-    adminKennels = this.getAdminKennels();
-  } else if (isTier1) {
-    adminKennels = [{
-      kennelPath: 'locations/' + this.userCountry + '/states/' + this.userState + '/kennels/' + this.userKennel,
-      kennelName: this.userKennel,
-      country: this.userCountry,
-      state: this.userState,
-      designation: (this.userData && this.userData.designation) ? this.userData.designation : 'Admin',
-      isDefault: true
-    }];
-  }
-  
-  console.log('adminKennels:', adminKennels);
-  
-  if (adminKennels.length === 0) {
-    console.log('No admin kennels found, hiding');
-    this.els.kennelWalletSection.style.display = 'none';
-    return;
-  }
-  
-  // Rest of the method continues unchanged...
-  // (setup kennel selector and load wallet)
+  updateKennelWalletVisibility() {
+    console.log('=== DEBUG: updateKennelWalletVisibility ===');
+    console.log('userRole:', this.userRole);
+    console.log('userData?.country:', this.userData?.country);
     
-
+    const isTier1 = this.userRole === 'Tier 1';
+    const isTier2 = this.userRole === 'Tier 2';
+    const country = this.userData?.country;
+    
+    const showKennelWallet = (isTier1 || isTier2) && country === 'Nigeria';
+    
+    if (!showKennelWallet || !this.els.kennelWalletSection) {
+      console.log('HIDING kennel wallet. isTier1:', isTier1, 'isTier2:', isTier2, 'country:', country);
+      if (this.els.kennelWalletSection) {
+        this.els.kennelWalletSection.style.display = 'none';
+      }
+      return;
+    }
+    
+    console.log('SHOWING kennel wallet');
+    this.els.kennelWalletSection.style.display = 'flex';
+    
+    let adminKennels = [];
+    
+    if (isTier2) {
+      // Tier 2: Get kennels from getAdminKennels()
+      adminKennels = this.getAdminKennels();
+    } else if (isTier1) {
+      // Tier 1: Use their default kennel
+      adminKennels = [{
+        kennelPath: `locations/${this.userCountry}/states/${this.userState}/kennels/${this.userKennel}`,
+        kennelName: this.userKennel,
+        country: this.userCountry,
+        state: this.userState,
+        designation: this.userData?.designation || 'Admin',
+        isDefault: true
+      }];
+    }
+    
+    console.log('adminKennels:', adminKennels);
+    
+    if (adminKennels.length === 0) {
+      console.log('No admin kennels found, hiding');
+      this.els.kennelWalletSection.style.display = 'none';
+      return;
+    }
     
     // Setup kennel selector if multiple kennels
     const kennelSelect = this.els.selKennelWallet;
@@ -4896,7 +4877,7 @@ updateKennelWalletVisibility() {
     }
     
     // Click handler to open dialog
-    this.els.tvKennelWalletBalance.onclick = () => this.    const kennelSelect = this.els.selKennelWallet;Dialog();
+    this.els.tvKennelWalletBalance.onclick = () => this.showKennelWalletDialog();
   }
 
   async loadKennelWallet(kennelPath) {
@@ -4971,7 +4952,7 @@ updateKennelWalletVisibility() {
     this.unsubscribers.push(this.kennelWalletUnsubscribe);
   }
 
-       const kennelSelect = this.els.selKennelWallet;Dialog() {
+   showKennelWalletDialog() {
     const kennelPath = this.currentKennelWallet;
     if (!kennelPath) return;
     

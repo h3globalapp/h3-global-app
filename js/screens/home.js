@@ -1217,43 +1217,6 @@ updateRoleBasedVisibility() {
   this.updateKennelWalletVisibility();
 }
   
-
-  this.els.overflowBtn.style.display = 'block';
-  
-  const liAddKennel = document.getElementById('liAddKennel');
-  const liNewKennelReq = document.getElementById('liNewKennelReq');
-  const liUsersList = document.getElementById('liUsersList');
-  const liPayList = document.getElementById('liPayList');
-  const liViewRequests = document.getElementById('liViewRequests');
-  const liKennelAdmin = document.getElementById('liKennelAdmin');
-  const liPayReq = document.getElementById('liPayReq');
-  
-  if (liAddKennel) liAddKennel.style.display = isTier1 ? 'block' : 'none';
-  if (liNewKennelReq) liNewKennelReq.style.display = isTier1 ? 'block' : 'none';
-  if (liUsersList) liUsersList.style.display = isTier1 ? 'block' : 'none';
-  if (liPayList) liPayList.style.display = show ? 'block' : 'none';
-  
-  if (liViewRequests) liViewRequests.style.display = 'block';
-  if (liKennelAdmin) liKennelAdmin.style.display = 'block';
-  if (liPayReq) liPayReq.style.display = 'block';
-  
-  // Button visibility
-  this.els.btnAddKennel.style.display = isTier1 ? 'block' : 'none';
-  this.els.btnViewRequests.style.display = (isTier1 || isTier2) ? 'block' : 'none';
-  this.els.btnNewKennelRequests.style.display = isTier1 ? 'block' : 'none';
-  
-  // Layout: Tier 1 gets 2-column grid, others vertical
-  if (isTier1 && this.els.actionGrid) {
-    this.els.actionGrid.classList.add('tier1-layout');
-  } else if (this.els.actionGrid) {
-    this.els.actionGrid.classList.remove('tier1-layout');
-  }
-  
-  this.updateKennelWalletVisibility();
-}
-  
-    
-
   startUnreadListeners() {
     if (!this.currentUser) return;
     

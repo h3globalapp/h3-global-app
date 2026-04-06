@@ -1161,17 +1161,55 @@ viewProfileImage() {
     }
   }
 
-// PROPOSED FIX
 updateRoleBasedVisibility() {
-  const isTier1 = this.userRole === 'Tier 1';
-  const isTier2 = this.userRole === 'Tier 2';
+  const role = this.userRole;
+  const isTier1 = role === 'Tier 1';
+  const isTier2 = role === 'Tier 2';
   
-  // NEW: Check if they have Tier 2 in ANY kennel
-  const hasTier2Elsewhere = (this.userData?.otherKennels || [])
+  // FIX: Check if user has Tier 2 in any otherKennel
+  const hasTier2InOtherKennels = (this.userData?.otherKennels || [])
     .some(k => k.role === 'Tier 2');
   
-  const effectiveTier2 = isTier2 || hasTier2Elsewhere;
-  const show = isTier1 || effectiveTier2;
+  const effectiveIsTier2 = isTier2 || hasTier2InOtherKennels;
+  const show = isTier1 || effectiveIsTier2;
+  
+  if (!show) {
+    this.els.overflowBtn.style.display = 'none';
+    return;
+  }
+  
+  this.els.overflowBtn.style.display = 'block';
+  
+  const liAddKennel = document.getElementById('liAddKennel');
+  const liNewKennelReq = document.getElementById('liNewKennelReq');
+  const liUsersList = document.getElementById('liUsersList');
+  const liPayList = document.getElementById('liPayList');
+  const liViewRequests = document.getElementById('liViewRequests');
+  const liKennelAdmin = document.getElementById('liKennelAdmin');
+  const liPayReq = document.getElementById('liPayReq');
+  
+  if (liAddKennel) liAddKennel.style.display = isTier1 ? 'block' : 'none';
+  if (liNewKennelReq) liNewKennelReq.style.display = isTier1 ? 'block' : 'none';
+  if (liUsersList) liUsersList.style.display = isTier1 ? 'block' : 'none';
+  if (liPayList) liPayList.style.display = show ? 'block' : 'none';
+  
+  if (liViewRequests) liViewRequests.style.display = 'block';
+  if (liKennelAdmin) liKennelAdmin.style.display = 'block';
+  if (liPayReq) liPayReq.style.display = 'block';
+  
+  // FIX: Use effectiveIsTier2 here
+  this.els.btnAddKennel.style.display = isTier1 ? 'block' : 'none';
+  this.els.btnViewRequests.style.display = (isTier1 || effectiveIsTier2) ? 'block' : 'none';
+  this.els.btnNewKennelRequests.style.display = isTier1 ? 'block' : 'none';
+  
+  if (isTier1 && this.els.actionGrid) {
+    this.els.actionGrid.classList.add('tier1-layout');
+  } else if (this.els.actionGrid) {
+    this.els.actionGrid.classList.remove('tier1-layout');
+  }
+  
+  this.updateKennelWalletVisibility();
+}
   
   if (!show) {
     this.els.overflowBtn.style.display = 'none';
@@ -4793,14 +4831,58 @@ async requestGeolocationPermission() {
   
     // NEW: Kennel Wallet Methods
   
-  updateKennelWalletVisibility() {
-    console.log('=== DEBUG: updateKennelWalletVisibility ===');
-    console.log('userRole:', this.userRole);
-    console.log('userData?.country:', this.userData?.country);
-    
-    const isTier1 = this.userRole === 'Tier 1';
-    const isTier2 = this.userRole === 'Tier 2';
-    const country = this.userData?.country;
+ updateKennelWalletVisibility() {
+  console.log('=== DEBUG: updateKennelWalletVisibility ===');
+  console.log('userRole:', this.userRole);
+  console.log('userData?.country:', this.userData?.country);
+  
+  const isTier1 = this.userRole === 'Tier 1';
+  const isTier2 = this.userRole === 'Tier 2';
+  
+  // FIX: Check if user has Tier 2 in any otherKennel
+  const hasTier2InOtherKennels = (this.userData?.otherKennels || [])
+    .some(k => k.role === 'Tier 2');
+  
+  const effectiveIsTier2 = isTier2 || hasTier2InOtherKennels;
+  const country = this.userData?.country;
+  
+  const showKennelWallet = (isTier1 || effectiveIsTier2) && country === 'Nigeria';
+  
+  if (!showKennelWallet || !this.els.kennelWalletSection) {
+    console.log('HIDING kennel wallet. isTier1:', isTier1, 'effectiveIsTier2:', effectiveIsTier2, 'country:', country);
+    if (this.els.kennelWalletSection) {
+      this.els.kennelWalletSection.style.display = 'none';
+    }
+    return;
+  }
+  
+  console.log('SHOWING kennel wallet');
+  this.els.kennelWalletSection.style.display = 'flex';
+  
+  let adminKennels = [];
+  
+  if (effectiveIsTier2) {  // FIX: Use effectiveIsTier2
+    adminKennels = this.getAdminKennels();
+  } else if (isTier1) {
+    adminKennels = [{
+      kennelPath: `locations/${this.userCountry}/states/${this.userState}/kennels/${this.userKennel}`,
+      kennelName: this.userKennel,
+      country: this.userCountry,
+      state: this.userState,
+      designation: this.userData?.designation || 'Admin',
+      isDefault: true
+    }];
+  }
+  
+  console.log('adminKennels:', adminKennels);
+  
+  if (adminKennels.length === 0) {
+    console.log('No admin kennels found, hiding');
+    this.els.kennelWalletSection.style.display = 'none';
+    return;
+  }
+  
+  // ... rest of method stays the same
     
     const showKennelWallet = (isTier1 || isTier2) && country === 'Nigeria';
     

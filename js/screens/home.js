@@ -1161,11 +1161,17 @@ viewProfileImage() {
     }
   }
 
+// PROPOSED FIX
 updateRoleBasedVisibility() {
-  const role = this.userRole;
-  const isTier1 = role === 'Tier 1';
-  const isTier2 = role === 'Tier 2';
-  const show = isTier1 || isTier2;
+  const isTier1 = this.userRole === 'Tier 1';
+  const isTier2 = this.userRole === 'Tier 2';
+  
+  // NEW: Check if they have Tier 2 in ANY kennel
+  const hasTier2Elsewhere = (this.userData?.otherKennels || [])
+    .some(k => k.role === 'Tier 2');
+  
+  const effectiveTier2 = isTier2 || hasTier2Elsewhere;
+  const show = isTier1 || effectiveTier2;
   
   if (!show) {
     this.els.overflowBtn.style.display = 'none';

@@ -4823,9 +4823,9 @@ updateKennelWalletVisibility() {
   var effectiveIsTier2 = isTier2 || hasTier2InOtherKennels;
   var country = userCountry;
   
-  var showKennelWallet = (isTier1 || effectiveIsTier2) && country === 'Nigeria';
+  var     const kennelSelect = this.els.selKennelWallet; = (isTier1 || effectiveIsTier2) && country === 'Nigeria';
   
-  if (!showKennelWallet || !this.els.kennelWalletSection) {
+  if (!    const kennelSelect = this.els.selKennelWallet; || !this.els.kennelWalletSection) {
     console.log('HIDING kennel wallet. isTier1:', isTier1, 'effectiveIsTier2:', effectiveIsTier2, 'country:', country);
     if (this.els.kennelWalletSection) {
       this.els.kennelWalletSection.style.display = 'none';
@@ -4862,43 +4862,7 @@ updateKennelWalletVisibility() {
   // Rest of the method continues unchanged...
   // (setup kennel selector and load wallet)
     
-    const showKennelWallet = (isTier1 || isTier2) && country === 'Nigeria';
-    
-    if (!showKennelWallet || !this.els.kennelWalletSection) {
-      console.log('HIDING kennel wallet. isTier1:', isTier1, 'isTier2:', isTier2, 'country:', country);
-      if (this.els.kennelWalletSection) {
-        this.els.kennelWalletSection.style.display = 'none';
-      }
-      return;
-    }
-    
-    console.log('SHOWING kennel wallet');
-    this.els.kennelWalletSection.style.display = 'flex';
-    
-    let adminKennels = [];
-    
-    if (isTier2) {
-      // Tier 2: Get kennels from getAdminKennels()
-      adminKennels = this.getAdminKennels();
-    } else if (isTier1) {
-      // Tier 1: Use their default kennel
-      adminKennels = [{
-        kennelPath: `locations/${this.userCountry}/states/${this.userState}/kennels/${this.userKennel}`,
-        kennelName: this.userKennel,
-        country: this.userCountry,
-        state: this.userState,
-        designation: this.userData?.designation || 'Admin',
-        isDefault: true
-      }];
-    }
-    
-    console.log('adminKennels:', adminKennels);
-    
-    if (adminKennels.length === 0) {
-      console.log('No admin kennels found, hiding');
-      this.els.kennelWalletSection.style.display = 'none';
-      return;
-    }
+
     
     // Setup kennel selector if multiple kennels
     const kennelSelect = this.els.selKennelWallet;
@@ -4932,7 +4896,7 @@ updateKennelWalletVisibility() {
     }
     
     // Click handler to open dialog
-    this.els.tvKennelWalletBalance.onclick = () => this.showKennelWalletDialog();
+    this.els.tvKennelWalletBalance.onclick = () => this.    const kennelSelect = this.els.selKennelWallet;Dialog();
   }
 
   async loadKennelWallet(kennelPath) {
@@ -5007,7 +4971,7 @@ updateKennelWalletVisibility() {
     this.unsubscribers.push(this.kennelWalletUnsubscribe);
   }
 
-   showKennelWalletDialog() {
+       const kennelSelect = this.els.selKennelWallet;Dialog() {
     const kennelPath = this.currentKennelWallet;
     if (!kennelPath) return;
     

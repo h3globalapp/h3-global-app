@@ -1217,11 +1217,7 @@ updateRoleBasedVisibility() {
   this.updateKennelWalletVisibility();
 }
   
-  if (!show) {
-    this.els.overflowBtn.style.display = 'none';
-    return;
-  }
-  
+
   this.els.overflowBtn.style.display = 'block';
   
   const liAddKennel = document.getElementById('liAddKennel');

@@ -131,11 +131,85 @@
       color: var(--clr-primary);
       font-weight: 600;
     }
+
+	 /* PWA Install Banner Styles */
+	  
+  #install-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #FF6D00 0%, #FF8F00 100%);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 99998;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #install-banner.visible {
+    transform: translateY(0);
+  }
+  #install-banner .banner-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  #install-banner .banner-icon {
+    font-size: 20px;
+  }
+  #install-banner .banner-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  #install-banner button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  #install-banner button:hover {
+    opacity: 0.9;
+  }
+  #install-btn {
+    background: white;
+    color: #FF6D00;
+  }
+  #dismiss-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+  }
+  /* Push content down when banner shows */
+  body.banner-visible {
+    padding-top: 60px;
+  }
+  /* Hide if already installed */
+  @media (display-mode: standalone) {
+    #install-banner { display: none !important; }
+  }
+</style>
 	
-	
-  </style>
 </head>
 <body>
+	<!-- PWA Install Banner -->
+<div id="install-banner">
+  <div class="banner-text">
+    <span class="banner-icon">🏃</span>
+    <span>Install H3 Global for quick access!</span>
+  </div>
+  <div class="banner-buttons">
+    <button id="install-btn" type="button">Install</button>
+    <button id="dismiss-btn" type="button">Later</button>
+  </div>
+</div>
 
 <div class="login-container">
   
@@ -203,5 +277,51 @@
 <div id="recaptcha-container"></div>
 
 <script src="js/screens/login.js" type="module"></script>
+	<!-- PWA Auto-Install Prompt -->
+<script>
+  let deferredPrompt;
+  const installBanner = document.getElementById('install-banner');
+  const installBtn = document.getElementById('install-btn');
+  const dismissBtn = document.getElementById('dismiss-btn');
+
+  // Check if already installed
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+    || window.navigator.standalone === true;
+  
+  if (!isStandalone) {
+    // Listen for install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('beforeinstallprompt fired');
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Show banner after short delay
+      setTimeout(() => {
+        installBanner.classList.add('visible');
+        document.body.classList.add('banner-visible');
+      }, 1000);
+    });
+
+    // Handle Install button
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User ${outcome === 'accepted' ? 'installed' : 'dismissed'} the app`);
+      
+      installBanner.classList.remove('visible');
+      document.body.classList.remove('banner-visible');
+      deferredPrompt = null;
+    });
+
+    // Handle Dismiss button
+    dismissBtn.addEventListener('click', () => {
+      installBanner.classList.remove('visible');
+      document.body.classList.remove('banner-visible');
+      localStorage.setItem('installBannerDismissed', Date.now());
+    });
+  }
+</script>
 </body>
 </html>

@@ -91,8 +91,79 @@
     });
   }
 </script>
+  <!-- PWA Install Banner Styles -->
+<style>
+  #install-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #FF6D00 0%, #FF8F00 100%);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 99998;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #install-banner.visible {
+    transform: translateY(0);
+  }
+  #install-banner .banner-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  #install-banner .banner-icon {
+    font-size: 20px;
+  }
+  #install-banner .banner-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  #install-banner button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  #install-banner button:hover {
+    opacity: 0.9;
+  }
+  #install-btn {
+    background: white;
+    color: #FF6D00;
+  }
+  #dismiss-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+  }
+  /* Hide banner if app is already installed */
+  @media (display-mode: standalone) {
+    #install-banner { display: none !important; }
+  }
+</style>
 </head>
 <body>
+  <!-- PWA Install Banner -->
+<div id="install-banner">
+  <div class="banner-text">
+    <span class="banner-icon">🏃</span>
+    <span>Install H3 Global for quick access!</span>
+  </div>
+  <div class="banner-buttons">
+    <button id="install-btn" type="button">Install</button>
+    <button id="dismiss-btn" type="button">Later</button>
+  </div>
+</div>
 <!-- ADD THIS: Loading screen to hide auth flash -->
 <div id="app-loading" style="position:fixed; inset:0; background:white; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 0.3s;">
   <div style="font-size:48px; margin-bottom:16px;">🏃</div>
@@ -211,6 +282,59 @@
     const loader = document.getElementById('app-loading');
     if (loader) loader.remove();
   }, 3000);
+</script>
+  <!-- PWA Auto-Install Prompt -->
+<script>
+  let deferredPrompt;
+  const installBanner = document.getElementById('install-banner');
+  const installBtn = document.getElementById('install-btn');
+  const dismissBtn = document.getElementById('dismiss-btn');
+
+  // Check if already installed
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+    || window.navigator.standalone === true;
+  
+  if (isStandalone) {
+    console.log('App is already installed');
+  } else {
+    // Listen for install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('beforeinstallprompt fired');
+      e.preventDefault(); // Stop browser mini-banner
+      deferredPrompt = e;
+      
+      // Show our custom banner after short delay
+      setTimeout(() => {
+        installBanner.classList.add('visible');
+      }, 1000);
+    });
+
+    // Handle Install button click
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User ${outcome === 'accepted' ? 'installed' : 'dismissed'} the app`);
+      
+      installBanner.classList.remove('visible');
+      deferredPrompt = null;
+    });
+
+    // Handle Dismiss button
+    dismissBtn.addEventListener('click', () => {
+      installBanner.classList.remove('visible');
+      // Optional: remember dismissal in localStorage
+      localStorage.setItem('installBannerDismissed', Date.now());
+    });
+  }
+
+  // Hide banner if user dismissed it recently (within 7 days)
+  const dismissed = localStorage.getItem('installBannerDismissed');
+  if (dismissed && (Date.now() - parseInt(dismissed)) < 7 * 24 * 60 * 60 * 1000) {
+    console.log('Banner was dismissed recently');
+    // We'll still show it if beforeinstallprompt fires, but you could block it here
+  }
 </script>
 </body>
 </html>

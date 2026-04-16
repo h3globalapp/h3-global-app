@@ -284,7 +284,7 @@
   const installBtn = document.getElementById('install-btn');
   const dismissBtn = document.getElementById('dismiss-btn');
 
-  // Check if already installed
+  // Check if already installed as PWA
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
     || window.navigator.standalone === true;
   
@@ -315,11 +315,11 @@
       deferredPrompt = null;
     });
 
-    // Handle Dismiss button
+    // Handle Dismiss button — just hide, no memory
     dismissBtn.addEventListener('click', () => {
       installBanner.classList.remove('visible');
       document.body.classList.remove('banner-visible');
-      localStorage.setItem('installBannerDismissed', Date.now());
+      // No localStorage — banner will show again on next refresh!
     });
   }
 </script>

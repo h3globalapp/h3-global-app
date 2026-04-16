@@ -283,33 +283,32 @@
     if (loader) loader.remove();
   }, 3000);
 </script>
-  <!-- PWA Auto-Install Prompt -->
+<!-- PWA Auto-Install Prompt -->
 <script>
   let deferredPrompt;
   const installBanner = document.getElementById('install-banner');
   const installBtn = document.getElementById('install-btn');
   const dismissBtn = document.getElementById('dismiss-btn');
 
-  // Check if already installed
+  // Check if already installed as PWA
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
     || window.navigator.standalone === true;
   
-  if (isStandalone) {
-    console.log('App is already installed');
-  } else {
+  if (!isStandalone) {
     // Listen for install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('beforeinstallprompt fired');
-      e.preventDefault(); // Stop browser mini-banner
+      e.preventDefault();
       deferredPrompt = e;
       
-      // Show our custom banner after short delay
+      // Show banner after short delay
       setTimeout(() => {
         installBanner.classList.add('visible');
+        document.body.classList.add('banner-visible');
       }, 1000);
     });
 
-    // Handle Install button click
+    // Handle Install button
     installBtn.addEventListener('click', async () => {
       if (!deferredPrompt) return;
       
@@ -318,22 +317,16 @@
       console.log(`User ${outcome === 'accepted' ? 'installed' : 'dismissed'} the app`);
       
       installBanner.classList.remove('visible');
+      document.body.classList.remove('banner-visible');
       deferredPrompt = null;
     });
 
-    // Handle Dismiss button
+    // Handle Dismiss button — just hide, no memory
     dismissBtn.addEventListener('click', () => {
       installBanner.classList.remove('visible');
-      // Optional: remember dismissal in localStorage
-      localStorage.setItem('installBannerDismissed', Date.now());
+      document.body.classList.remove('banner-visible');
+      // No localStorage — banner will show again on next refresh!
     });
-  }
-
-  // Hide banner if user dismissed it recently (within 7 days)
-  const dismissed = localStorage.getItem('installBannerDismissed');
-  if (dismissed && (Date.now() - parseInt(dismissed)) < 7 * 24 * 60 * 60 * 1000) {
-    console.log('Banner was dismissed recently');
-    // We'll still show it if beforeinstallprompt fires, but you could block it here
   }
 </script>
 </body>

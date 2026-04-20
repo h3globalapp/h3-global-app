@@ -4250,35 +4250,35 @@ showRequestsDialogForKennel(kennel) {
       const title = overlay.querySelector('h2');
       title.textContent = `Users List (${snapshot.size})`;
       
-            // Process each user
+      // Process each user
       const userPromises = snapshot.docs.map(async (doc, index) => {
         const data = doc.data();
         const phone = data.phone || '';
         const subData = await this.checkSubscriptionStatus(phone);
         
-        // Determine display text from raw DB values
+        // Determine display text and colors from raw DB values
         let displayStatus = 'Free';
         let statusColor = '#9E9E9E';
-        let statusBg = '#9E9E9E15';
+        let statusBg = 'rgba(158, 158, 158, 0.1)';
         
         if (subData.status === 'active') {
           // Show tier exactly as in DB, capitalized
           const tier = subData.tier ? subData.tier.charAt(0).toUpperCase() + subData.tier.slice(1) : 'Active';
           displayStatus = tier;
           statusColor = '#4CAF50';
-          statusBg = '#4CAF5015';
+          statusBg = 'rgba(76, 175, 80, 0.1)';
         } else if (subData.status === 'trial') {
           displayStatus = 'Trial';
           statusColor = '#FF9800';
-          statusBg = '#FF980015';
+          statusBg = 'rgba(255, 152, 0, 0.1)';
         } else if (subData.status === 'expired' || subData.status === 'no-tier') {
           displayStatus = 'Expired';
           statusColor = '#d32f2f';
-          statusBg = '#d32f2f15';
+          statusBg = 'rgba(211, 47, 47, 0.1)';
         } else if (subData.status === 'No user') {
           displayStatus = 'No user';
           statusColor = '#666';
-          statusBg = '#66666615';
+          statusBg = 'rgba(102, 102, 102, 0.1)';
         }
         
         return {
@@ -4289,20 +4289,14 @@ showRequestsDialogForKennel(kennel) {
           status: displayStatus,
           statusColor: statusColor,
           statusBg: statusBg,
-          rawTier: subData.tier,
-          rawAmount: subData.amount,
-          rawStatus: subData.status,
-          expiresAt: subData.expiresAt,
           uid: doc.id
         };
       });
-		
       
       const users = await Promise.all(userPromises);
       
-      // Render list
+      // Render list - EACH USER IS A ROW (horizontal layout: avatar + info side by side)
       listContainer.innerHTML = users.map(user => {
- 
         return `
           <div class="user-item" style="
             display: flex;
@@ -4311,14 +4305,17 @@ showRequestsDialogForKennel(kennel) {
             border-bottom: 1px solid #eee;
             gap: 12px;
           ">
+            <!-- Number -->
             <div style="
               width: 24px;
               text-align: center;
               font-size: 14px;
               color: #999;
               font-weight: 500;
+              flex-shrink: 0;
             ">${user.index}</div>
             
+            <!-- Profile Picture -->
             <img src="${user.pic}" 
                  alt="${user.handle}" 
                  style="
@@ -4327,10 +4324,18 @@ showRequestsDialogForKennel(kennel) {
                    border-radius: 50%;
                    object-fit: cover;
                    border: 2px solid #e0e0e0;
+                   flex-shrink: 0;
                  "
                  onerror="this.src='${this.createPlaceholder(user.handle)}'">
             
-            <div style="flex: 1; min-width: 0;">
+            <!-- User Info (NAME + PHONE stacked vertically) -->
+            <div style="
+              flex: 1;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+            ">
               <div style="
                 font-weight: 600;
                 font-size: 16px;
@@ -4342,11 +4347,11 @@ showRequestsDialogForKennel(kennel) {
               <div style="
                 font-size: 12px;
                 color: #999;
-                margin-top: 2px;
               ">${user.phone || 'No phone'}</div>
             </div>
             
-                    <div style="
+            <!-- Status Badge -->
+            <div style="
               font-size: 12px;
               font-weight: 500;
               color: ${user.statusColor};
@@ -4354,9 +4359,9 @@ showRequestsDialogForKennel(kennel) {
               background: ${user.statusBg};
               border-radius: 12px;
               white-space: nowrap;
+              flex-shrink: 0;
             ">${user.status}</div>
-			
-			
+          </div>
         `;
       }).join('');
       
@@ -4369,6 +4374,8 @@ showRequestsDialogForKennel(kennel) {
       `;
     }
   }
+	
+      
 	
     async checkSubscriptionStatus(phone) {
     if (!phone) return { status: 'No user', tier: null, amount: null, expiresAt: null };

@@ -4250,31 +4250,59 @@ showRequestsDialogForKennel(kennel) {
       const title = overlay.querySelector('h2');
       title.textContent = `Users List (${snapshot.size})`;
       
-      // Process each user
+            // Process each user
       const userPromises = snapshot.docs.map(async (doc, index) => {
         const data = doc.data();
         const phone = data.phone || '';
-        const status = await this.checkSubscriptionStatus(phone);
+        const subData = await this.checkSubscriptionStatus(phone);
+        
+        // Determine display text from raw DB values
+        let displayStatus = 'Free';
+        let statusColor = '#9E9E9E';
+        let statusBg = '#9E9E9E15';
+        
+        if (subData.status === 'active') {
+          // Show tier exactly as in DB, capitalized
+          const tier = subData.tier ? subData.tier.charAt(0).toUpperCase() + subData.tier.slice(1) : 'Active';
+          displayStatus = tier;
+          statusColor = '#4CAF50';
+          statusBg = '#4CAF5015';
+        } else if (subData.status === 'trial') {
+          displayStatus = 'Trial';
+          statusColor = '#FF9800';
+          statusBg = '#FF980015';
+        } else if (subData.status === 'expired' || subData.status === 'no-tier') {
+          displayStatus = 'Expired';
+          statusColor = '#d32f2f';
+          statusBg = '#d32f2f15';
+        } else if (subData.status === 'No user') {
+          displayStatus = 'No user';
+          statusColor = '#666';
+          statusBg = '#66666615';
+        }
         
         return {
           index: index + 1,
           handle: data.hashHandle || 'Unknown',
           pic: data.profilePicUrl || '',
           phone: phone,
-          status: status,
+          status: displayStatus,
+          statusColor: statusColor,
+          statusBg: statusBg,
+          rawTier: subData.tier,
+          rawAmount: subData.amount,
+          rawStatus: subData.status,
+          expiresAt: subData.expiresAt,
           uid: doc.id
         };
       });
+		
       
       const users = await Promise.all(userPromises);
       
       // Render list
       listContainer.innerHTML = users.map(user => {
-                        const statusColor = 
-          user.status === 'Trial' ? '#FF9800' :
-          user.status.startsWith('Premium') ? '#4CAF50' :
-          user.status === 'Expired' ? '#d32f2f' : '#9E9E9E';
-		  
+ 
         return `
           <div class="user-item" style="
             display: flex;
@@ -4318,16 +4346,19 @@ showRequestsDialogForKennel(kennel) {
               ">${user.phone || 'No phone'}</div>
             </div>
             
-            <div style="
+                        <div style="
               font-size: 12px;
               font-weight: 500;
-              color: ${statusColor};
+              color: ${user.statusColor};
               padding: 4px 8px;
-              background: ${statusColor}15;
+              background: ${user.statusBg};
               border-radius: 12px;
               white-space: nowrap;
-            ">${user.status}</div>
-          </div>
+              cursor: help;
+            " title="${user.rawAmount ? '₦' + user.rawAmount.toLocaleString() + (user.rawTier ? ' / ' + user.rawTier : '') : ''}">
+              ${user.status}
+            </div>
+			
         `;
       }).join('');
       

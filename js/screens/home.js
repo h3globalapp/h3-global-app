@@ -4270,9 +4270,9 @@ showRequestsDialogForKennel(kennel) {
       
       // Render list
       listContainer.innerHTML = users.map(user => {
-        const statusColor = user.status === 'Premium_monthly' ? '#4CAF50' : 
+                const statusColor = user.status === 'Premium_monthly' || user.status === 'Premium_yearly' ? '#4CAF50' : 
                            user.status === 'Expired' ? '#d32f2f' : '#666';
-        
+		  
         return `
           <div class="user-item" style="
             display: flex;
@@ -4339,7 +4339,7 @@ showRequestsDialogForKennel(kennel) {
     }
   }
 
-  async checkSubscriptionStatus(phone) {
+    async checkSubscriptionStatus(phone) {
     if (!phone) return 'No user';
     
     try {
@@ -4354,19 +4354,49 @@ showRequestsDialogForKennel(kennel) {
       if (!doc) return 'No user';
       
       const data = doc.data();
-      const active = data.subscriptionActive || false;
-      const sku = data.subscriptionSku || '';
-      const expires = data.subscriptionExpiresAt || 0;
       
-      if (!active) return 'Expired';
-      if (sku === 'app_monthly_sub') return 'Premium_monthly';
-      return 'Free';
+      // NEW: Check subscriptionStatus field (active, inactive, expired, cancelled, etc.)
+      const status = data.subscriptionStatus || '';
+      const tier = data.subscriptionTier || '';
+      const expiresAt = data.subscriptionExpiresAt || null;
+      
+      // Check if subscription is active
+      if (status !== 'active') {
+        return 'Expired';
+      }
+      
+      // Check if expired based on timestamp (handle both old int64 and new Timestamp formats)
+      let isExpired = false;
+      if (expiresAt) {
+        if (typeof expiresAt === 'number') {
+          // Old format: int64 milliseconds
+          isExpired = expiresAt < Date.now();
+        } else if (expiresAt.toDate) {
+          // New format: Firestore Timestamp
+          isExpired = expiresAt.toDate() < new Date();
+        } else if (expiresAt instanceof Date) {
+          isExpired = expiresAt < new Date();
+        }
+      }
+      
+      if (isExpired) {
+        return 'Expired';
+      }
+      
+      // Return tier-based status
+      if (tier === 'monthly') return 'Premium_monthly';
+      if (tier === 'yearly') return 'Premium_yearly';
+      if (tier === 'free') return 'Free';
+      
+      // Fallback: if status is active but tier is unknown
+      return 'Premium';
       
     } catch (error) {
       console.error('Error checking subscription:', error);
       return 'Unknown';
     }
-  }
+	}
+	
 
   showPaymentRequestsDialog() {
     window.location.href = 'payment-requests.html';

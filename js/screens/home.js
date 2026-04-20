@@ -4270,8 +4270,10 @@ showRequestsDialogForKennel(kennel) {
       
       // Render list
       listContainer.innerHTML = users.map(user => {
-                const statusColor = user.status === 'Premium_monthly' || user.status === 'Premium_yearly' ? '#4CAF50' : 
-                           user.status === 'Expired' ? '#d32f2f' : '#666';
+                        const statusColor = 
+          user.status === 'Trial' ? '#FF9800' :
+          user.status.startsWith('Premium') ? '#4CAF50' :
+          user.status === 'Expired' ? '#d32f2f' : '#9E9E9E';
 		  
         return `
           <div class="user-item" style="
@@ -4338,8 +4340,7 @@ showRequestsDialogForKennel(kennel) {
       `;
     }
   }
-
-    async checkSubscriptionStatus(phone) {
+  async checkSubscriptionStatus(phone) {
     if (!phone) return 'No user';
     
     try {
@@ -4355,47 +4356,51 @@ showRequestsDialogForKennel(kennel) {
       
       const data = doc.data();
       
-      // NEW: Check subscriptionStatus field (active, inactive, expired, cancelled, etc.)
+      // NEW: Check subscriptionStatus field (trial, active, expired, etc.)
       const status = data.subscriptionStatus || '';
       const tier = data.subscriptionTier || '';
       const expiresAt = data.subscriptionExpiresAt || null;
       
-      // Check if subscription is active
-      if (status !== 'active') {
+      // Check if subscription is active or in trial
+      const validStatuses = ['trial', 'active'];
+      if (!validStatuses.includes(status)) {
         return 'Expired';
       }
-      
-      // Check if expired based on timestamp (handle both old int64 and new Timestamp formats)
-      let isExpired = false;
-      if (expiresAt) {
-        if (typeof expiresAt === 'number') {
-          // Old format: int64 milliseconds
-          isExpired = expiresAt < Date.now();
-        } else if (expiresAt.toDate) {
-          // New format: Firestore Timestamp
-          isExpired = expiresAt.toDate() < new Date();
-        } else if (expiresAt instanceof Date) {
-          isExpired = expiresAt < new Date();
+
+      const now = new Date();
+
+      // TRIAL: Check if trial period has ended
+      if (status === 'trial') {
+        const trialEnd = data.trialEndsAt?.toDate ? data.trialEndsAt.toDate() : null;
+        if (!trialEnd || trialEnd <= now) {
+          return 'Expired';
         }
+        return 'Trial';
       }
-      
-      if (isExpired) {
-        return 'Expired';
+
+      // ACTIVE: Check if subscription has expired
+      if (status === 'active') {
+        const expires = expiresAt?.toDate ? expiresAt.toDate() : null;
+        if (!expires || expires <= now) {
+          return 'Expired';
+        }
+        
+        // Return tier-specific status for color coding
+        if (tier === 'monthly') return 'Premium_monthly';
+        if (tier === 'quarterly') return 'Premium_quarterly';
+        if (tier === '6months') return 'Premium_6months';
+        if (tier === 'yearly') return 'Premium_yearly';
+        return 'Premium'; // active but unknown tier
       }
-      
-      // Return tier-based status
-      if (tier === 'monthly') return 'Premium_monthly';
-      if (tier === 'yearly') return 'Premium_yearly';
-      if (tier === 'free') return 'Free';
-      
-      // Fallback: if status is active but tier is unknown
-      return 'Premium';
+
+      return 'Expired';
       
     } catch (error) {
       console.error('Error checking subscription:', error);
       return 'Unknown';
     }
-	}
+  }
+	
 	
 
   showPaymentRequestsDialog() {

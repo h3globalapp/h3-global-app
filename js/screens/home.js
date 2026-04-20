@@ -4340,8 +4340,9 @@ showRequestsDialogForKennel(kennel) {
       `;
     }
   }
-  async checkSubscriptionStatus(phone) {
-    if (!phone) return 'No user';
+	
+    async checkSubscriptionStatus(phone) {
+    if (!phone) return { status: 'No user', tier: null, amount: null, expiresAt: null };
     
     try {
       const userQuery = query(
@@ -4352,54 +4353,26 @@ showRequestsDialogForKennel(kennel) {
       const snapshot = await getDocs(userQuery);
       const doc = snapshot.docs[0];
       
-      if (!doc) return 'No user';
+      if (!doc) return { status: 'No user', tier: null, amount: null, expiresAt: null };
       
       const data = doc.data();
       
-      // NEW: Check subscriptionStatus field (trial, active, expired, etc.)
-      const status = data.subscriptionStatus || '';
-      const tier = data.subscriptionTier || '';
-      const expiresAt = data.subscriptionExpiresAt || null;
-      
-      // Check if subscription is active or in trial
-      const validStatuses = ['trial', 'active'];
-      if (!validStatuses.includes(status)) {
-        return 'Expired';
-      }
-
-      const now = new Date();
-
-      // TRIAL: Check if trial period has ended
-      if (status === 'trial') {
-        const trialEnd = data.trialEndsAt?.toDate ? data.trialEndsAt.toDate() : null;
-        if (!trialEnd || trialEnd <= now) {
-          return 'Expired';
-        }
-        return 'Trial';
-      }
-
-      // ACTIVE: Check if subscription has expired
-      if (status === 'active') {
-        const expires = expiresAt?.toDate ? expiresAt.toDate() : null;
-        if (!expires || expires <= now) {
-          return 'Expired';
-        }
-        
-        // Return tier-specific status for color coding
-        if (tier === 'monthly') return 'Premium_monthly';
-        if (tier === 'quarterly') return 'Premium_quarterly';
-        if (tier === '6months') return 'Premium_6months';
-        if (tier === 'yearly') return 'Premium_yearly';
-        return 'Premium'; // active but unknown tier
-      }
-
-      return 'Expired';
+      // Return raw DB values — let the UI decide how to display them
+      return {
+        status: data.subscriptionStatus || 'no-tier',
+        tier: data.subscriptionTier || null,
+        amount: data.subscriptionAmount || null,
+        expiresAt: data.subscriptionExpiresAt || null,
+        trialEndsAt: data.trialEndsAt || null,
+        startedAt: data.subscriptionStartedAt || null
+      };
       
     } catch (error) {
       console.error('Error checking subscription:', error);
-      return 'Unknown';
+      return { status: 'Unknown', tier: null, amount: null, expiresAt: null };
     }
-  }
+	}
+	
 	
 	
 

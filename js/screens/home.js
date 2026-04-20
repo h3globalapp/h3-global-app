@@ -4346,7 +4346,7 @@ showRequestsDialogForKennel(kennel) {
               ">${user.phone || 'No phone'}</div>
             </div>
             
-                        <div style="
+                    <div style="
               font-size: 12px;
               font-weight: 500;
               color: ${user.statusColor};
@@ -4354,10 +4354,8 @@ showRequestsDialogForKennel(kennel) {
               background: ${user.statusBg};
               border-radius: 12px;
               white-space: nowrap;
-              cursor: help;
-            " title="${user.rawAmount ? '₦' + user.rawAmount.toLocaleString() + (user.rawTier ? ' / ' + user.rawTier : '') : ''}">
-              ${user.status}
-            </div>
+            ">${user.status}</div>
+			
 			
         `;
       }).join('');

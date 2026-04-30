@@ -538,6 +538,7 @@ showBlockingOverlay(reason) {
     const amount = this.userData?.subscriptionAmount;
     const balance = this.userData?.walletBalance || 0;
     const needed = (amount || 0) - balance;
+    const hasEnough = balance >= (amount || 0);
 
     const dialog = document.createElement('div');
     dialog.id = 'expired-subscription-dialog';
@@ -555,68 +556,127 @@ showBlockingOverlay(reason) {
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     `;
     
-    dialog.innerHTML = `
-      <div style="background: #d32f2f; color: white; padding: 20px; text-align: center;">
-        <div style="font-size: 48px; margin-bottom: 8px;">⏰</div>
-        <h2 style="margin: 0; font-size: 20px;">Subscription Expired</h2>
-      </div>
-      <div style="padding: 20px;">
-        <div style="background: #ffebee; border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">
-          <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Amount Due:</div>
-          <div style="font-size: 28px; font-weight: bold; color: #d32f2f;">
-            ₦${(amount || 0).toLocaleString()}
-          </div>
-          <div style="font-size: 12px; color: #666; margin-top: 8px;">
-            Balance: ₦${balance.toLocaleString()}
-          </div>
+    // DIFFERENT UI BASED ON WALLET BALANCE
+    if (hasEnough) {
+      // USER HAS ENOUGH MONEY — SHOW RENEW NOW
+      dialog.innerHTML = `
+        <div style="background: #d32f2f; color: white; padding: 20px; text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 8px;">⏰</div>
+          <h2 style="margin: 0; font-size: 20px;">Subscription Expired</h2>
         </div>
-        
-        <div style="background: #e8f5e9; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-          <div style="font-weight: 600; margin-bottom: 12px; color: #2e7d32;">
-            Fund Your Wallet:
+        <div style="padding: 20px;">
+          <div style="background: #e8f5e9; border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center; border-left: 4px solid #4CAF50;">
+            <div style="font-size: 14px; color: #2e7d32; margin-bottom: 8px;">
+              <strong>✅ Wallet Balance Sufficient</strong>
+            </div>
+            <div style="font-size: 14px; color: #666; margin-bottom: 4px;">
+              Balance: <strong>₦${balance.toLocaleString()}</strong>
+            </div>
+            <div style="font-size: 14px; color: #666;">
+              Renewal Amount: <strong>₦${(amount || 0).toLocaleString()}</strong>
+            </div>
           </div>
-          <div style="font-size: 14px; margin-bottom: 8px;">
-            <strong>Bank:</strong> ${this.userData?.titanBankName || 'Paystack-Titan'}
-          </div>
-          <div style="font-size: 14px; margin-bottom: 8px;">
-            <strong>Account:</strong> 
-            <span style="font-family: monospace;">
-              ${this.userData?.titanAccountNumber || 'N/A'}
-            </span>
-          </div>
-          <div style="background: white; border-radius: 8px; padding: 12px; font-size: 12px; color: #666; border: 1px dashed #4CAF50;">
-            Transfer <strong>₦${Math.max(needed, 1000).toLocaleString()}</strong> or more to renew
-          </div>
+          
+          <p style="color: #666; text-align: center; margin-bottom: 20px; line-height: 1.5;">
+            Your wallet has enough funds to renew your <strong>${tier || 'subscription'}</strong> plan immediately.
+          </p>
+          
+          <button id="btn-renew-now" style="
+            width: 100%;
+            padding: 14px;
+            background: #FF6D00;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+          ">Renew Subscription Now</button>
+          
+          <button id="btn-cancel-expired" style="
+            width: 100%;
+            padding: 14px;
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+          ">Cancel</button>
         </div>
-        
-        <button id="btn-check-status" style="
-          width: 100%;
-          padding: 14px;
-          background: #FF6D00;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          cursor: pointer;
-          margin-bottom: 12px;
-        ">I've Sent Money - Check Status</button>
-        
-        <button id="btn-cancel-expired" style="
-          width: 100%;
-          padding: 14px;
-          background: #f5f5f5;
-          color: #666;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          cursor: pointer;
-        ">Cancel</button>
-      </div>
-    `;
+      `;
+    } else {
+      // USER NEEDS MORE MONEY — SHOW BANK TRANSFER UI (ORIGINAL)
+      dialog.innerHTML = `
+        <div style="background: #d32f2f; color: white; padding: 20px; text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 8px;">⏰</div>
+          <h2 style="margin: 0; font-size: 20px;">Subscription Expired</h2>
+        </div>
+        <div style="padding: 20px;">
+          <div style="background: #ffebee; border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">
+            <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Amount Due:</div>
+            <div style="font-size: 28px; font-weight: bold; color: #d32f2f;">
+              ₦${(amount || 0).toLocaleString()}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 8px;">
+              Balance: ₦${balance.toLocaleString()} • Need: ₦${Math.max(needed, 0).toLocaleString()} more
+            </div>
+          </div>
+          
+          <div style="background: #e8f5e9; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="font-weight: 600; margin-bottom: 12px; color: #2e7d32;">
+              Fund Your Wallet:
+            </div>
+            <div style="font-size: 14px; margin-bottom: 8px;">
+              <strong>Bank:</strong> ${this.userData?.titanBankName || 'Paystack-Titan'}
+            </div>
+            <div style="font-size: 14px; margin-bottom: 8px;">
+              <strong>Account:</strong> 
+              <span style="font-family: monospace;">
+                ${this.userData?.titanAccountNumber || 'N/A'}
+              </span>
+            </div>
+            <div style="background: white; border-radius: 8px; padding: 12px; font-size: 12px; color: #666; border: 1px dashed #4CAF50;">
+              Transfer <strong>₦${Math.max(needed, 1000).toLocaleString()}</strong> or more to renew
+            </div>
+          </div>
+          
+          <button id="btn-check-status" style="
+            width: 100%;
+            padding: 14px;
+            background: #FF6D00;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 12px;
+          ">I've Sent Money - Check Status</button>
+          
+          <button id="btn-cancel-expired" style="
+            width: 100%;
+            padding: 14px;
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+          ">Cancel</button>
+        </div>
+      `;
+    }
     
     document.body.appendChild(dialog);
     
-    dialog.querySelector('#btn-check-status').onclick = () => this.attemptRenewal();
+    // ATTACH EVENT LISTENERS BASED ON WHICH UI WAS SHOWN
+    if (hasEnough) {
+      dialog.querySelector('#btn-renew-now').onclick = () => this.attemptRenewal();
+    } else {
+      dialog.querySelector('#btn-check-status').onclick = () => this.attemptRenewal();
+    }
+    
     dialog.querySelector('#btn-cancel-expired').onclick = () => {
       window.location.href = 'index.html';
     };

@@ -683,9 +683,18 @@ showBlockingOverlay(reason) {
   }
 
   async attemptRenewal() {
-    const btn = document.querySelector('#btn-check-status');
-    btn.disabled = true;
-    btn.textContent = 'Checking...';
+    // FIX: Query from the dialog, not document, since button is inside the dialog
+    const dialog = document.getElementById('expired-subscription-dialog');
+    // Try dialog first, fallback to document for backwards compatibility
+    const btn = dialog?.querySelector('#btn-renew-now') 
+             || dialog?.querySelector('#btn-check-status')
+             || document.querySelector('#btn-renew-now')
+             || document.querySelector('#btn-check-status');
+    
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+    }
 
     try {
       const deductFn = httpsCallable(functions, 'deductSubscriptionPayment');
@@ -696,13 +705,19 @@ showBlockingOverlay(reason) {
         alert('✅ Subscription renewed!');
       } else if (result.data.insufficientFunds) {
         alert('❌ Still insufficient funds. Please send more.');
-        btn.disabled = false;
-        btn.textContent = "I've Sent Money - Check Status";
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "I've Sent Money - Check Status";
+        }
       }
     } catch (error) {
       alert('Error: ' + error.message);
-      btn.disabled = false;
-      btn.textContent = "I've Sent Money - Check Status";
+      if (btn) {
+        btn.disabled = false;
+        // Restore appropriate text based on which button exists
+        const renewBtn = dialog?.querySelector('#btn-renew-now') || document.querySelector('#btn-renew-now');
+        btn.textContent = renewBtn ? "Renew Subscription Now" : "I've Sent Money - Check Status";
+      }
     }
   }
 

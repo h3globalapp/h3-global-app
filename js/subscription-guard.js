@@ -683,40 +683,80 @@ showBlockingOverlay(reason) {
   }
 
   async attemptRenewal() {
-    // FIX: Query from the dialog, not document, since button is inside the dialog
+    // DEBUG: Log everything
+    console.log('=== attemptRenewal() STARTED ===');
+    console.log('functions imported?', typeof functions);
+    console.log('functions._url?', functions?._url || 'no _url property');
+
     const dialog = document.getElementById('expired-subscription-dialog');
-    // Try dialog first, fallback to document for backwards compatibility
     const btn = dialog?.querySelector('#btn-renew-now') 
-             || dialog?.querySelector('#btn-check-status')
-             || document.querySelector('#btn-renew-now')
-             || document.querySelector('#btn-check-status');
+             || dialog?.querySelector('#btn-check-status');
     
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Checking...';
+    if (!btn) {
+      console.error('Button not found in dialog');
+      alert('Error: Button missing. Refresh the page.');
+      return;
     }
 
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+
     try {
+      // Verify functions is available
+      if (!functions) {
+        throw new Error('Firebase Functions not initialized. Check firebase-config.js');
+      }
+
+      console.log('Creating httpsCallable...');
       const deductFn = httpsCallable(functions, 'deductSubscriptionPayment');
+      console.log('Calling function...');
+
+      // Call with explicit timeout handling
       const result = await deductFn({});
       
-      if (result.data.success) {
-        // Overlay removed by listener
+      console.log('Function returned:', result);
+      console.log('Result data:', result.data);
+
+      if (result.data?.success) {
         alert('✅ Subscription renewed!');
-      } else if (result.data.insufficientFunds) {
-        alert('❌ Still insufficient funds. Please send more.');
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "I've Sent Money - Check Status";
-        }
-      }
-    } catch (error) {
-      alert('Error: ' + error.message);
-      if (btn) {
+        this.removeBlockingOverlay();
+      } else if (result.data?.insufficientFunds) {
+        alert(`❌ Insufficient funds. Need ₦${result.data.required}, have ₦${result.data.balance}`);
         btn.disabled = false;
-        // Restore appropriate text based on which button exists
-        const renewBtn = dialog?.querySelector('#btn-renew-now') || document.querySelector('#btn-renew-now');
-        btn.textContent = renewBtn ? "Renew Subscription Now" : "I've Sent Money - Check Status";
+        btn.textContent = originalText;
+      } else {
+        alert('⚠️ ' + (result.data?.message || 'Renewal failed. Try again.'));
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+      
+    } catch (error) {
+      console.error('=== FULL ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      console.error('Error details:', error?.details);
+      
+      // ALWAYS re-enable button
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      // User-friendly messages based on error type
+      const msg = error?.message || 'Unknown error';
+      const code = error?.code || 'unknown';
+      
+      if (code === 'unauthenticated') {
+        alert('❌ Session expired. Please log in again.');
+        window.location.href = 'login.html';
+      } else if (code === 'not-found') {
+        alert('❌ Account not found. Contact support.');
+      } else if (code === 'internal') {
+        alert('❌ Server error: ' + msg);
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        alert('❌ Network error. Check your connection and try again.');
+      } else {
+        alert('❌ Error (' + code + '): ' + msg);
       }
     }
   }

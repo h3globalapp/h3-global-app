@@ -9,6 +9,7 @@ class SubscriptionGuard {
     this.userData = null;
     this.unsubscribe = null;
     this.selectedTier = null;
+    this._renewing = false;  // Prevent duplicate silent renewal calls
     this.init();
   }
 
@@ -119,6 +120,13 @@ checkStatus() {
   if (subscriptionStatus === 'trial') {
     const trialEnd = trialEndsAt?.toDate ? trialEndsAt.toDate() : null;
     if (!trialEnd || trialEnd <= now) {
+      // Trial expired — check if we should auto-renew
+      const balance = this.userData?.walletBalance || 0;
+      const amount = this.userData?.subscriptionAmount || 0;
+      if (balance >= amount && amount > 0) {
+        // Trigger silent auto-renewal
+        this.silentAutoRenew();
+      }
       return { blocked: true, reason: 'expired' };
     }
     return { blocked: false };
@@ -557,55 +565,23 @@ showBlockingOverlay(reason) {
     `;
     
     // DIFFERENT UI BASED ON WALLET BALANCE
-    if (hasEnough) {
-      // USER HAS ENOUGH MONEY — SHOW RENEW NOW
+        if (hasEnough) {
+      // USER HAS ENOUGH MONEY — SHOW ACTIVATING SPINNER, AUTO-ATTEMPT
       dialog.innerHTML = `
-        <div style="background: #d32f2f; color: white; padding: 20px; text-align: center;">
-          <div style="font-size: 48px; margin-bottom: 8px;">⏰</div>
-          <h2 style="margin: 0; font-size: 20px;">Subscription Expired</h2>
+        <div style="background: #FF6D00; color: white; padding: 20px; text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 8px;">⏳</div>
+          <h2 style="margin: 0; font-size: 20px;">Activating Subscription...</h2>
+          <p style="margin: 8px 0 0 0; opacity: 0.9;">Please wait while we process your renewal</p>
         </div>
-        <div style="padding: 20px;">
-          <div style="background: #e8f5e9; border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center; border-left: 4px solid #4CAF50;">
-            <div style="font-size: 14px; color: #2e7d32; margin-bottom: 8px;">
-              <strong>✅ Wallet Balance Sufficient</strong>
-            </div>
-            <div style="font-size: 14px; color: #666; margin-bottom: 4px;">
-              Balance: <strong>₦${balance.toLocaleString()}</strong>
-            </div>
-            <div style="font-size: 14px; color: #666;">
-              Renewal Amount: <strong>₦${(amount || 0).toLocaleString()}</strong>
-            </div>
-          </div>
-          
-          <p style="color: #666; text-align: center; margin-bottom: 20px; line-height: 1.5;">
-            Your wallet has enough funds to renew your <strong>${tier || 'subscription'}</strong> plan immediately.
-          </p>
-          
-          <button id="btn-renew-now" style="
-            width: 100%;
-            padding: 14px;
-            background: #FF6D00;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-bottom: 12px;
-          ">Renew Subscription Now</button>
-          
-          <button id="btn-cancel-expired" style="
-            width: 100%;
-            padding: 14px;
-            background: #f5f5f5;
-            color: #666;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-          ">Cancel</button>
+        <div style="padding: 20px; text-align: center;">
+          <div style="width: 40px; height: 40px; border: 3px solid rgba(255,109,0,0.3); border-top-color: #FF6D00; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p style="color: #666; font-size: 14px;">Deducting ₦${(amount || 0).toLocaleString()} from your wallet</p>
         </div>
+        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
       `;
+      
+      // Auto-attempt renewal after brief delay (let UI render first)
+      setTimeout(() => this.attemptRenewal(), 300);
     } else {
       // USER NEEDS MORE MONEY — SHOW BANK TRANSFER UI (ORIGINAL)
       dialog.innerHTML = `
@@ -718,9 +694,9 @@ showBlockingOverlay(reason) {
       console.log('Function returned:', result);
       console.log('Result data:', result.data);
 
-      if (result.data?.success) {
-        alert('✅ Subscription renewed!');
-        this.removeBlockingOverlay();
+          if (result.data?.success) {
+        // Don't alert — onSnapshot listener will see status='active' and remove overlay automatically
+        console.log('Renewal successful, waiting for listener update...');
       } else if (result.data?.insufficientFunds) {
         alert(`❌ Insufficient funds. Need ₦${result.data.required}, have ₦${result.data.balance}`);
         btn.disabled = false;
@@ -758,6 +734,32 @@ showBlockingOverlay(reason) {
       } else {
         alert('❌ Error (' + code + '): ' + msg);
       }
+    }
+  }
+
+    async silentAutoRenew() {
+    // Prevent duplicate calls
+    if (this._renewing) return;
+    this._renewing = true;
+
+    console.log('🔄 Silent auto-renewal triggered');
+
+    try {
+      const deductFn = httpsCallable(functions, 'deductSubscriptionPayment');
+      const result = await deductFn({});
+
+      if (result.data?.success) {
+        console.log('✅ Silent renewal successful');
+        // onSnapshot listener will auto-remove overlay when status updates to 'active'
+      } else if (result.data?.insufficientFunds) {
+        console.log('❌ Silent renewal failed: insufficient funds');
+      } else {
+        console.log('⚠️ Silent renewal failed:', result.data?.message);
+      }
+    } catch (error) {
+      console.error('Silent renewal error:', error);
+    } finally {
+      this._renewing = false;
     }
   }
 

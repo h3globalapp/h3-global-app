@@ -5231,6 +5231,7 @@ updateKennelWalletVisibility() {
     
     btnWithdrawSelect.onclick = () => {
       withdrawMode = 'select';
+	selectedWallets = []; // ← ADD THIS LINE HERE
       btnWithdrawSelect.classList.add('active');
       btnWithdrawAll.classList.remove('active');
 		  selectedWallets = []; // ADD THIS LINE

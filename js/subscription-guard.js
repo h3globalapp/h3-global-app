@@ -9,7 +9,7 @@ class SubscriptionGuard {
     this.userData = null;
     this.unsubscribe = null;
     this.selectedTier = null;
-    this._renewing = false;  // Prevent duplicate silent renewal calls
+    this._renewing = false;
     this.init();
   }
 
@@ -37,167 +37,151 @@ class SubscriptionGuard {
     });
   }
 
-async loadUserData(uid) {
-  const cachedKey = `userData_${uid}`;
-  const cachedData = sessionStorage.getItem(cachedKey);
-  
-  // FIX: Define userRef at the top, before any use
-  const userRef = doc(db, 'users', uid);
-  
-  // Only use cache to show loading/blocking, not to allow access
-  if (cachedData) {
-    try {
-      const parsed = JSON.parse(cachedData);
-      this.userData = parsed;
+  async loadUserData(uid) {
+    const cachedKey = `userData_${uid}`;
+    const cachedData = sessionStorage.getItem(cachedKey);
+    const userRef = doc(db, 'users', uid);
+
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        this.userData = parsed;
+        const status = this.checkStatus();
+        if (status.blocked) {
+          this.showBlockingOverlay(status.reason);
+        }
+      } catch (e) {
+        console.error('Cache parse error:', e);
+      }
+    }
+
+    this.unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        window.location.href = 'signup.html';
+        return;
+      }
+
+      this.userData = snapshot.data();
+      sessionStorage.setItem(cachedKey, JSON.stringify(this.userData));
+
       const status = this.checkStatus();
-      
-      // Only act on cache if it says BLOCKED - never use cache to allow access
       if (status.blocked) {
         this.showBlockingOverlay(status.reason);
-        // Continue to set up real-time listener for fresh data
+      } else {
+        this.removeBlockingOverlay();
       }
-      // If cache says "not blocked", don't remove overlay - wait for real-time
-    } catch (e) {
-      console.error('Cache parse error:', e);
-    }
+    }, (error) => {
+      console.error('Guard error:', error);
+      if (error.code === 'permission-denied') {
+        window.location.href = 'login.html';
+      } else if (!document.getElementById('subscription-overlay')) {
+        this.showBlockingOverlay('loading');
+      }
+    });
   }
 
-  // Now userRef is properly defined when we use it here
-  this.unsubscribe = onSnapshot(userRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      window.location.href = 'signup.html';
-      return;
+  checkStatus() {
+    if (!this.userData) return { blocked: true, reason: 'loading' };
+
+    const {
+      titanAccountNumber,
+      subscriptionTier,
+      subscriptionStatus,
+      trialEndsAt,
+      subscriptionExpiresAt
+    } = this.userData;
+
+    if (!titanAccountNumber) {
+      return { blocked: true, reason: 'no-wallet' };
     }
 
-    this.userData = snapshot.data();
-    sessionStorage.setItem(cachedKey, JSON.stringify(this.userData));
-    
-    const status = this.checkStatus();
-    if (status.blocked) {
-      this.showBlockingOverlay(status.reason);
-    } else {
-      this.removeBlockingOverlay();
+    if (!subscriptionTier) {
+      return { blocked: true, reason: 'no-tier' };
     }
-  }, (error) => {
-    console.error('Guard error:', error);
-    if (error.code === 'permission-denied') {
-      window.location.href = 'login.html';
+
+    const validStatuses = ['trial', 'active'];
+    if (!validStatuses.includes(subscriptionStatus)) {
+      return { blocked: true, reason: 'expired' };
     }
-    // On other errors, show loading/blocking if not already blocked
-    else if (!document.getElementById('subscription-overlay')) {
-      this.showBlockingOverlay('loading');
+
+    const now = new Date();
+
+    if (subscriptionStatus === 'trial') {
+      const trialEnd = trialEndsAt?.toDate ? trialEndsAt.toDate() : null;
+      if (!trialEnd || trialEnd <= now) {
+        const balance = this.userData?.walletBalance || 0;
+        const amount = this.userData?.subscriptionAmount || 0;
+        if (balance >= amount && amount > 0) {
+          this.silentAutoRenew();
+        }
+        return { blocked: true, reason: 'expired' };
+      }
+      return { blocked: false };
     }
-  });
-}
 
-checkStatus() {
-  if (!this.userData) return { blocked: true, reason: 'loading' };
+    if (subscriptionStatus === 'active') {
+      const expires = subscriptionExpiresAt?.toDate ? subscriptionExpiresAt.toDate() : null;
+      if (!expires || expires <= now) {
+        return { blocked: true, reason: 'expired' };
+      }
+      return { blocked: false };
+    }
 
-  const {
-    titanAccountNumber,
-    subscriptionTier,
-    subscriptionStatus,
-    trialEndsAt,
-    subscriptionExpiresAt
-  } = this.userData;
-
-  if (!titanAccountNumber) {
-    return { blocked: true, reason: 'no-wallet' };
-  }
-
-  if (!subscriptionTier) {
-    return { blocked: true, reason: 'no-tier' };
-  }
-
-  // NEW: Treat missing/invalid status as expired
-  const validStatuses = ['trial', 'active'];
-  if (!validStatuses.includes(subscriptionStatus)) {
     return { blocked: true, reason: 'expired' };
   }
 
-  const now = new Date();
+  showBlockingOverlay(reason) {
+    if (document.getElementById('subscription-overlay')) return;
 
-  if (subscriptionStatus === 'trial') {
-    const trialEnd = trialEndsAt?.toDate ? trialEndsAt.toDate() : null;
-    if (!trialEnd || trialEnd <= now) {
-      // Trial expired — check if we should auto-renew
-      const balance = this.userData?.walletBalance || 0;
-      const amount = this.userData?.subscriptionAmount || 0;
-      if (balance >= amount && amount > 0) {
-        // Trigger silent auto-renewal
-        this.silentAutoRenew();
-      }
-      return { blocked: true, reason: 'expired' };
-    }
-    return { blocked: false };
-  }
-
-  if (subscriptionStatus === 'active') {
-    const expires = subscriptionExpiresAt?.toDate ? subscriptionExpiresAt.toDate() : null;
-    // FIX: Missing expiration = EXPIRED, not allowed
-    if (!expires || expires <= now) {
-      return { blocked: true, reason: 'expired' };
-    }
-    return { blocked: false };
-  }
-
-  return { blocked: true, reason: 'expired' };
-}
-
-showBlockingOverlay(reason) {
-  // Don't create duplicate overlays
-  if (document.getElementById('subscription-overlay')) return;
-
-  const overlay = document.createElement('div');
-  overlay.id = 'subscription-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.75);
-    backdrop-filter: blur(4px);
-    z-index: 999998;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `;
-  
-  document.body.appendChild(overlay);
-  
-  // ADD THIS: Show loading spinner for 'loading' reason
-  if (reason === 'loading') {
-    overlay.innerHTML = `
-      <div style="
-        color: white;
-        font-family: sans-serif;
-        text-align: center;
-      ">
-        <div style="
-          width: 40px;
-          height: 40px;
-          border: 3px solid rgba(255,255,255,0.3);
-          border-top-color: #FF6D00;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto 16px;
-        "></div>
-        <div>Loading your subscription...</div>
-      </div>
-      <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-      </style>
+    const overlay = document.createElement('div');
+    overlay.id = 'subscription-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      z-index: 999998;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
-  } else {
-    this.showAppropriateDialog(reason);
+
+    document.body.appendChild(overlay);
+
+    if (reason === 'loading') {
+      overlay.innerHTML = `
+        <div style="
+          color: white;
+          font-family: sans-serif;
+          text-align: center;
+        ">
+          <div style="
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #FF6D00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+          "></div>
+          <div>Loading your subscription...</div>
+        </div>
+        <style>
+          @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
+      `;
+    } else {
+      this.showAppropriateDialog(reason);
+    }
   }
-}
 
   removeBlockingOverlay() {
     const overlay = document.getElementById('subscription-overlay');
     if (overlay) overlay.remove();
-    
+
     const dialogs = ['wallet-required-dialog', 'paywall-dialog', 'expired-subscription-dialog'];
     dialogs.forEach(id => {
       const el = document.getElementById(id);
@@ -237,7 +221,7 @@ showBlockingOverlay(reason) {
       font-family: sans-serif;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     `;
-    
+
     dialog.innerHTML = `
       <div style="padding: 24px; text-align: center;">
         <div style="font-size: 48px; margin-bottom: 16px;">💳</div>
@@ -269,9 +253,9 @@ showBlockingOverlay(reason) {
         ">Cancel</button>
       </div>
     `;
-    
+
     document.body.appendChild(dialog);
-    
+
     dialog.querySelector('#btn-create-wallet').onclick = () => this.createWallet();
     dialog.querySelector('#btn-cancel-wallet').onclick = () => {
       window.location.href = 'index.html';
@@ -293,7 +277,6 @@ showBlockingOverlay(reason) {
       });
 
       if (result.data.success) {
-        // Listener will update and remove dialog
         alert('✅ Wallet created! Account: ' + result.data.accountNumber);
       }
     } catch (error) {
@@ -325,15 +308,15 @@ showBlockingOverlay(reason) {
       display: flex;
       flex-direction: column;
     `;
-    
+
     const balance = this.userData?.walletBalance || 0;
-    
+
     dialog.innerHTML = `
       <div style="background: #FF6D00; color: white; padding: 20px; text-align: center; flex-shrink: 0;">
         <h2 style="margin: 0; font-size: 22px;">Choose Your Plan</h2>
         <p style="margin: 8px 0 0 0; opacity: 0.9;">7-day FREE trial, then auto-renew</p>
       </div>
-      
+
       <div style="padding: 20px; overflow-y: auto;">
         <div style="background: #FFF3E0; border-radius: 12px; padding: 16px; margin-bottom: 20px; border-left: 4px solid #FF6D00;">
           <div style="font-size: 14px; color: #333; margin-bottom: 8px;">
@@ -343,7 +326,7 @@ showBlockingOverlay(reason) {
             ₦${balance.toLocaleString()}
           </div>
         </div>
-        
+
         <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
           <label class="tier-option" style="
             display: flex;
@@ -361,7 +344,7 @@ showBlockingOverlay(reason) {
             </div>
             <div style="font-weight: bold; color: #FF6D00; font-size: 18px;">₦1,900</div>
           </label>
-          
+
           <label class="tier-option" style="
             display: flex;
             align-items: center;
@@ -378,7 +361,7 @@ showBlockingOverlay(reason) {
             </div>
             <div style="font-weight: bold; color: #FF6D00; font-size: 18px;">₦5,400</div>
           </label>
-          
+
           <label class="tier-option" style="
             display: flex;
             align-items: center;
@@ -395,7 +378,7 @@ showBlockingOverlay(reason) {
             </div>
             <div style="font-weight: bold; color: #FF6D00; font-size: 18px;">₦10,200</div>
           </label>
-          
+
           <label class="tier-option" style="
             display: flex;
             align-items: center;
@@ -427,13 +410,13 @@ showBlockingOverlay(reason) {
             <div style="font-weight: bold; color: #FF6D00; font-size: 18px; margin-top: 8px;">₦19,200</div>
           </label>
         </div>
-        
+
         <div style="font-size: 12px; color: #999; text-align: center; margin-bottom: 16px;">
           By selecting a plan, you agree to a 7-day free trial.<br>
           Your wallet will be charged when the trial ends.
         </div>
       </div>
-      
+
       <div style="padding: 20px; border-top: 1px solid #e0e0e0; flex-shrink: 0;">
         <button id="btn-confirm-tier" disabled style="
           width: 100%;
@@ -460,27 +443,24 @@ showBlockingOverlay(reason) {
         ">Cancel</button>
       </div>
     `;
-    
+
     document.body.appendChild(dialog);
-    
-    // Radio button change handler
+
     const radios = dialog.querySelectorAll('input[name="tier"]');
     const confirmBtn = dialog.querySelector('#btn-confirm-tier');
     const options = dialog.querySelectorAll('.tier-option');
-    
+
     radios.forEach((radio, index) => {
       radio.onchange = () => {
         this.selectedTier = {
           tier: radio.value,
           amount: parseInt(radio.dataset.amount)
         };
-        
-        // Enable confirm button
+
         confirmBtn.disabled = false;
         confirmBtn.style.background = '#FF6D00';
         confirmBtn.style.cursor = 'pointer';
-        
-        // Highlight selected
+
         options.forEach((opt, i) => {
           if (i === index) {
             opt.style.borderColor = '#FF6D00';
@@ -492,8 +472,7 @@ showBlockingOverlay(reason) {
         });
       };
     });
-    
-    // Hover effects
+
     options.forEach(opt => {
       opt.onmouseenter = () => {
         if (!opt.querySelector('input').checked) {
@@ -506,7 +485,7 @@ showBlockingOverlay(reason) {
         }
       };
     });
-    
+
     confirmBtn.onclick = () => this.confirmTierSelection();
     dialog.querySelector('#btn-cancel-tier').onclick = () => {
       window.location.href = 'index.html';
@@ -515,11 +494,11 @@ showBlockingOverlay(reason) {
 
   async confirmTierSelection() {
     if (!this.selectedTier) return;
-    
+
     const confirmBtn = document.querySelector('#btn-confirm-tier');
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Processing...';
-    
+
     try {
       const selectTierFn = httpsCallable(functions, 'selectSubscriptionTier');
       const result = await selectTierFn({
@@ -527,9 +506,8 @@ showBlockingOverlay(reason) {
         amount: this.selectedTier.amount,
         trialDays: 7
       });
-      
+
       if (result.data.success) {
-        // Dialog and overlay will be removed by the listener when status updates
         alert('✅ ' + this.selectedTier.tier + ' plan selected! 7-day trial started.');
       }
     } catch (error) {
@@ -563,10 +541,8 @@ showBlockingOverlay(reason) {
       font-family: sans-serif;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     `;
-    
-    // DIFFERENT UI BASED ON WALLET BALANCE
-        if (hasEnough) {
-      // USER HAS ENOUGH MONEY — SHOW ACTIVATING SPINNER, AUTO-ATTEMPT
+
+    if (hasEnough) {
       dialog.innerHTML = `
         <div style="background: #FF6D00; color: white; padding: 20px; text-align: center;">
           <div style="font-size: 48px; margin-bottom: 8px;">⏳</div>
@@ -579,11 +555,9 @@ showBlockingOverlay(reason) {
         </div>
         <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
       `;
-      
-      // Auto-attempt renewal after brief delay (let UI render first)
+
       setTimeout(() => this.attemptRenewal(), 300);
     } else {
-      // USER NEEDS MORE MONEY — SHOW BANK TRANSFER UI (ORIGINAL)
       dialog.innerHTML = `
         <div style="background: #d32f2f; color: white; padding: 20px; text-align: center;">
           <div style="font-size: 48px; margin-bottom: 8px;">⏰</div>
@@ -599,7 +573,7 @@ showBlockingOverlay(reason) {
               Balance: ₦${balance.toLocaleString()} • Need: ₦${Math.max(needed, 0).toLocaleString()} more
             </div>
           </div>
-          
+
           <div style="background: #e8f5e9; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
             <div style="font-weight: 600; margin-bottom: 12px; color: #2e7d32;">
               Fund Your Wallet:
@@ -608,7 +582,7 @@ showBlockingOverlay(reason) {
               <strong>Bank:</strong> ${this.userData?.titanBankName || 'Paystack-Titan'}
             </div>
             <div style="font-size: 14px; margin-bottom: 8px;">
-              <strong>Account:</strong> 
+              <strong>Account:</strong>
               <span style="font-family: monospace;">
                 ${this.userData?.titanAccountNumber || 'N/A'}
               </span>
@@ -617,7 +591,7 @@ showBlockingOverlay(reason) {
               Transfer <strong>₦${Math.max(needed, 1000).toLocaleString()}</strong> or more to renew
             </div>
           </div>
-          
+
           <button id="btn-check-status" style="
             width: 100%;
             padding: 14px;
@@ -628,8 +602,8 @@ showBlockingOverlay(reason) {
             font-size: 16px;
             cursor: pointer;
             margin-bottom: 12px;
-          ">I've Sent Money - Check Status</button>
-          
+          ">I\'ve Sent Money - Check Status</button>
+
           <button id="btn-cancel-expired" style="
             width: 100%;
             padding: 14px;
@@ -643,10 +617,9 @@ showBlockingOverlay(reason) {
         </div>
       `;
     }
-    
-     document.body.appendChild(dialog);
-    
-    // ATTACH EVENT LISTENERS BASED ON WHICH UI WAS SHOWN
+
+    document.body.appendChild(dialog);
+
     if (!hasEnough) {
       const checkBtn = dialog.querySelector('#btn-check-status');
       if (checkBtn) checkBtn.onclick = () => this.attemptRenewal();
@@ -726,8 +699,7 @@ showBlockingOverlay(reason) {
     }
   }
 
-    async silentAutoRenew() {
-    // Prevent duplicate calls
+  async silentAutoRenew() {
     if (this._renewing) return;
     this._renewing = true;
 
@@ -739,7 +711,6 @@ showBlockingOverlay(reason) {
 
       if (result.data?.success) {
         console.log('✅ Silent renewal successful');
-        // onSnapshot listener will auto-remove overlay when status updates to 'active'
       } else if (result.data?.insufficientFunds) {
         console.log('❌ Silent renewal failed: insufficient funds');
       } else {
@@ -757,7 +728,6 @@ showBlockingOverlay(reason) {
   }
 }
 
-// Initialize immediately
 const guard = new SubscriptionGuard();
 
 window.addEventListener('beforeunload', () => {

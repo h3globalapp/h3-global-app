@@ -644,19 +644,21 @@ showBlockingOverlay(reason) {
       `;
     }
     
-    document.body.appendChild(dialog);
+     document.body.appendChild(dialog);
     
     // ATTACH EVENT LISTENERS BASED ON WHICH UI WAS SHOWN
     if (hasEnough) {
-      dialog.querySelector('#btn-renew-now').onclick = () => this.attemptRenewal();
+      // Spinner UI has no buttons — auto-renewal triggered by setTimeout above
+      // No button listeners needed
     } else {
-      dialog.querySelector('#btn-check-status').onclick = () => this.attemptRenewal();
+      const checkBtn = dialog.querySelector('#btn-check-status');
+      if (checkBtn) checkBtn.onclick = () => this.attemptRenewal();
     }
     
-    dialog.querySelector('#btn-cancel-expired').onclick = () => {
+    const cancelBtn = dialog.querySelector('#btn-cancel-expired');
+    if (cancelBtn) cancelBtn.onclick = () => {
       window.location.href = 'index.html';
     };
-  }
 
   async attemptRenewal() {
     // DEBUG: Log everything
@@ -664,19 +666,20 @@ showBlockingOverlay(reason) {
     console.log('functions imported?', typeof functions);
     console.log('functions._url?', functions?._url || 'no _url property');
 
-    const dialog = document.getElementById('expired-subscription-dialog');
+      const dialog = document.getElementById('expired-subscription-dialog');
     const btn = dialog?.querySelector('#btn-renew-now') 
              || dialog?.querySelector('#btn-check-status');
     
     if (!btn) {
-      console.error('Button not found in dialog');
-      alert('Error: Button missing. Refresh the page.');
-      return;
+      // No button (spinner UI) — just run silently without button feedback
+      console.log('No button found, running silent renewal...');
     }
 
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Checking...';
+    const originalText = btn ? btn.textContent : 'Checking...';
+       if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+    }
 
     try {
       // Verify functions is available
@@ -703,8 +706,10 @@ showBlockingOverlay(reason) {
         btn.textContent = originalText;
       } else {
         alert('⚠️ ' + (result.data?.message || 'Renewal failed. Try again.'));
+            if (btn) {
         btn.disabled = false;
         btn.textContent = originalText;
+      }
       }
       
     } catch (error) {

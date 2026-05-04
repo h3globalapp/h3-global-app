@@ -10,6 +10,7 @@ class SubscriptionGuard {
     this.unsubscribe = null;
     this.selectedTier = null;
     this._renewing = false;
+    this._renewalAttempted = false;
     this.init();
   }
 
@@ -111,7 +112,7 @@ class SubscriptionGuard {
       if (!trialEnd || trialEnd <= now) {
         const balance = this.userData?.walletBalance || 0;
         const amount = this.userData?.subscriptionAmount || 0;
-        if (balance >= amount && amount > 0) {
+        if (balance >= amount && amount > 0 && !this._renewing && !this._renewalAttempted) {
           this.silentAutoRenew();
         }
         return { blocked: true, reason: 'expired' };
@@ -659,13 +660,13 @@ class SubscriptionGuard {
       if (result.data?.success) {
         console.log('Renewal successful, waiting for listener update...');
       } else if (result.data?.insufficientFunds) {
-        alert(`❌ Insufficient funds. Need ₦${result.data.required}, have ₦${result.data.balance}`);
+        console.log(`Insufficient funds. Need ₦${result.data.required}, have ₦${result.data.balance}`);
         if (btn) {
           btn.disabled = false;
           btn.textContent = originalText;
         }
       } else {
-        alert('⚠️ ' + (result.data?.message || 'Renewal failed. Try again.'));
+        console.log('Renewal message:', result.data?.message);
         if (btn) {
           btn.disabled = false;
           btn.textContent = originalText;
@@ -702,6 +703,7 @@ class SubscriptionGuard {
   async silentAutoRenew() {
     if (this._renewing) return;
     this._renewing = true;
+    this._renewalAttempted = true;
 
     console.log('🔄 Silent auto-renewal triggered');
 

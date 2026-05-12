@@ -697,7 +697,14 @@ async function loadExistingRun(els, runId) {
     els.country.value = data.country || "";
     els.state.value = data.state || "";
     els.kennel.value = data.kennel || "";
-    els.etRunDate.value = data.date || "";
+    // Normalize M/D/YYYY → YYYY-MM-DD for HTML date input
+let displayDate = data.date || "";
+if (displayDate && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(displayDate)) {
+    const [m, d, y] = displayDate.split('/');
+    displayDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+els.etRunDate.value = displayDate;
+    
     els.etRunTime.value = data.time || "";
     els.etRegoFee.value = data.regoFee?.toString() || "";
     els.spinnerTrailType.value = data.trailType || "";

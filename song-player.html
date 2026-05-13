@@ -3,24 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <title>Hash Songs – Sync Player</title>
+  <!-- CRITICAL: Added viewport-fit=cover for iOS standalone mode -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  
+  <!-- PWA Manifest -->
   <link rel="manifest" href="./manifest.json">
+  
+  <!-- Android -->
   <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Support -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="H3 Global App">
   <link rel="apple-touch-icon" href="/icon-192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
+  
+  <!-- Theme Color -->
   <meta name="theme-color" content="#FF6D00">
   <meta name="background-color" content="#FFFFFF">
+  
+  <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
+
+  <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
+     navigator.serviceWorker.register('./sw.js')
         .then((reg) => console.log('SW registered:', reg.scope))
         .catch((err) => console.log('SW registration failed:', err));
     }
   </script>
+
+  <!-- =====  H3 GLOBAL APP THEME  ===== -->
   <style>
     :root {
       --clr-primary: #FF6D00;
@@ -31,111 +46,306 @@
       --border: #e0e0e0;
       --shadow: 0 2px 8px rgba(0,0,0,0.1);
       --header-height: 56px;
+      --controls-height: 180px;
+      /* iOS safe area support */
+      --sat: env(safe-area-inset-top);
+      --sar: env(safe-area-inset-right);
+      --sab: env(safe-area-inset-bottom);
+      --sal: env(safe-area-inset-left);
     }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+    
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    
     body {
-      margin: 0; padding: 0; background: var(--bg); color: var(--text);
-      display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile */
       overflow: hidden;
+      /* iOS safe area padding */
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
     }
+    
+    /* ===== HEADER ===== */
     .masthead {
-      background: var(--clr-primary); color: white; padding: 12px 16px;
-      display: flex; align-items: center; gap: 12px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2); height: var(--header-height); flex-shrink: 0;
+      background: var(--clr-primary);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      height: var(--header-height);
+      flex-shrink: 0;
+      /* Account for safe area */
       padding-top: max(12px, env(safe-area-inset-top));
     }
-    .masthead__back { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-    .masthead__title { font-size: 1.1em; font-weight: 600; margin: 0; flex: 1; }
+    
+    .masthead__back {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .masthead__title {
+      font-size: 1.1em;
+      font-weight: 600;
+      margin: 0;
+      flex: 1;
+    }
+    
+    /* ===== FIXED CONTROLS CONTAINER ===== */
     .controls-container {
-      background: var(--bg); padding: 12px 16px; display: flex; flex-direction: column; gap: 12px;
-      flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;
+      background: var(--bg);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      z-index: 10;
     }
-    .card { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
-    .card-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-    audio { width: 100%; border-radius: 8px; outline: 0; margin-bottom: 12px; height: 40px; }
-    .btn-row { display: flex; gap: 8px; }
+    
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 0 0 12px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* ===== AUDIO PLAYER ===== */
+    audio {
+      width: 100%;
+      border-radius: 8px;
+      outline: 0;
+      margin-bottom: 12px;
+      height: 40px;
+    }
+    
+    /* ===== BUTTONS ===== */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    
     .btn {
-      flex: 1; border: none; padding: 12px 16px; border-radius: 8px; font-size: 14px;
-      font-weight: 600; cursor: pointer; transition: all 0.2s;
-      display: flex; align-items: center; justify-content: center; gap: 4px;
+      flex: 1;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
     }
-    .btn-primary { background: var(--clr-primary); color: white; }
-    .btn-primary:hover { background: #e65100; }
-    .btn-primary:disabled { background: #ddd; color: #888; cursor: not-allowed; }
-    .btn-secondary { background: white; color: var(--clr-primary); border: 2px solid var(--clr-primary); }
-    .btn-secondary:hover { background: #fff3e0; }
-    .btn-secondary.active { background: var(--clr-primary); color: white; }
-    .btn-icon { flex: 0 0 44px; padding: 0; font-size: 18px; }
-    .utility-row { display: flex; gap: 8px; justify-content: center; }
-    .utility-row .btn { flex: 1; font-size: 12px; padding: 10px; }
-    #status { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0; }
+    
+    .btn-primary {
+      background: var(--clr-primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #e65100;
+    }
+    
+    .btn-primary:disabled {
+      background: #ddd;
+      color: #888;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: var(--clr-primary);
+      border: 2px solid var(--clr-primary);
+    }
+    
+    .btn-secondary:hover {
+      background: #fff3e0;
+    }
+    
+    .btn-secondary.active {
+      background: var(--clr-primary);
+      color: white;
+    }
+    
+    .btn-icon {
+      flex: 0 0 44px;
+      padding: 0;
+      font-size: 18px;
+    }
+    
+    /* ===== UTILITY ROW ===== */
+    .utility-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    
+    .utility-row .btn {
+      flex: 1;
+      font-size: 12px;
+      padding: 10px;
+    }
+    
+    /* ===== STATUS ===== */
+    #status {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 4px 0 0 0;
+    }
+    
+    /* ===== SCROLLABLE LYRICS AREA ===== */
     .lyrics-container {
-      flex: 1; overflow: hidden; display: flex; flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
       padding: 0 16px 16px 16px;
+      /* Safe area at bottom */
       padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
+    
     .lyrics-card {
-      background: var(--card); border-radius: 12px; box-shadow: var(--shadow);
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .lyrics-header { padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .lyrics-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin: 0; }
-    #verse-display {
-      flex: 1; overflow-y: auto; padding: 12px 16px;
-      display: flex; flex-direction: column; justify-content: center;
+    
+    .lyrics-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
+    
+    .lyrics-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+    }
+    
+    #lines {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+    }
+    
     .line {
-      padding: 12px 16px; border-radius: 8px; margin: 6px 0;
-      transition: all 0.25s ease; font-size: 1.05em; line-height: 1.5; cursor: pointer;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 6px 0;
+      transition: all 0.25s ease;
+      font-size: 1.05em;
+      line-height: 1.5;
+      cursor: pointer;
     }
-    .line:hover { background: #f5f5f5; }
+    
+    .line:hover {
+      background: #f5f5f5;
+    }
+    
     .line.active {
-      background: var(--clr-primary); color: white; font-weight: 600;
+      background: var(--clr-primary);
+      color: white;
+      font-weight: 600;
       box-shadow: 0 2px 8px rgba(255,109,0,0.3);
     }
   </style>
 </head>
+
 <body>
+  <!-- ===== HEADER ===== -->
   <header class="masthead">
     <button class="masthead__back" id="backBtn">←</button>
     <h1 class="masthead__title">Hash Songs</h1>
   </header>
+
+  <!-- ===== FIXED CONTROLS ===== -->
   <div class="controls-container">
+    <!-- Now Playing Card -->
     <div class="card" style="padding: 12px 16px;">
       <div class="card-title" style="margin-bottom: 8px;">Now Playing</div>
       <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
+      
+      <!-- Main Controls -->
       <div class="btn-row">
         <button class="btn btn-primary" id="prev">⏮ Prev</button>
         <button class="btn btn-primary" id="play">▶ Play</button>
         <button class="btn btn-primary" id="next">Next ⏭</button>
       </div>
+      
+      <!-- Status -->
       <div id="status">Loading...</div>
     </div>
+    
+    <!-- Utility Controls -->
     <div class="utility-row">
       <button class="btn btn-secondary" id="repeat">🔁 Off</button>
       <button class="btn btn-secondary" id="favFilterBtn">♥ Favs</button>
       <button class="btn btn-secondary btn-icon" id="favBtn">♥</button>
     </div>
   </div>
+
+  <!-- ===== SCROLLABLE LYRICS ===== -->
   <div class="lyrics-container">
     <div class="lyrics-card">
       <div class="lyrics-header">
         <h2 class="lyrics-title">Lyrics</h2>
       </div>
-      <div id="verse-display"></div>
+      <div id="lines"></div>
     </div>
   </div>
+
+  <!-- ===== SCRIPT ===== -->
   <script type="module">
+    /* ---------- READ URL ---------- */
     const p = new URLSearchParams(location.hash.substring(1));
     const audioSrc = p.get('audio');
     const lrcText = p.get('lrc');
     const title = p.get('title') || 'Hash Song';
     const thisId = p.get('id');
 
+    /* ---------- ELEMENTS ---------- */
     const audio = document.getElementById('audio');
     const playBtn = document.getElementById('play');
     const prevBtn = document.getElementById('prev');
@@ -144,166 +354,62 @@
     const favBtn = document.getElementById('favBtn');
     const favFilterBtn = document.getElementById('favFilterBtn');
     const status = document.getElementById('status');
-    const verseDisplay = document.getElementById('verse-display');
+    const linesDiv = document.getElementById('lines');
     const backBtn = document.getElementById('backBtn');
 
+    /* ---------- BACK BUTTON ---------- */
     backBtn.onclick = () => { window.location.href = 'songs.html'; };
-    document.addEventListener('backbutton', () => { window.location.href = 'songs.html'; }, false);
+    document.addEventListener('backbutton', () => {
+      window.location.href = 'songs.html';
+    }, false);
 
     /* ---------- LRC PARSER ---------- */
     function parseLrc(txt) {
-      const rawLines = txt.split('\n');
-      const parsedLines = [];
-
-      // First pass: extract all timestamped lines
-      for (const line of rawLines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        // Match [MM:SS.mmm] or [MM:SS.mm] format
-        const m = trimmed.match(/^\[(\d{2}):(\d{2})\.(\d{1,3})\](.*)$/);
-        if (!m) continue;
-
-        const minutes = parseInt(m[1], 10);
-        const seconds = parseInt(m[2], 10);
-        const millis = parseInt(m[3], 10);
-        const time = minutes * 60 + seconds + millis / 1000;
-        const text = m[4].trim();
-
-        parsedLines.push({ time, text });
-      }
-
-      // Second pass: group into verses using "Repeat Chorus" markers
-      const verses = [];
-      let currentVerse = [];
-      let chorusTemplate = null;
-
-      for (let i = 0; i < parsedLines.length; i++) {
-        const line = parsedLines[i];
-        const lowerText = line.text.toLowerCase();
-
-        // Check if this line is a "Repeat Chorus" marker
-        const isRepeatMarker = lowerText.includes('repeat chorus');
-
-        // Check if this is a chorus line by content
-        const isChorusContent = 
-          lowerText.includes('that was a terrible song') ||
-          lowerText.includes('sing us another one') ||
-          lowerText.includes('just like the other one') ||
-          lowerText.includes('sing us another one thou');
-
-        if (isRepeatMarker) {
-          // End current verse if any
-          if (currentVerse.length > 0) {
-            const isChorus = currentVerse.some(l => {
-              const lt = l.text.toLowerCase();
-              return lt.includes('that was a terrible song') || lt.includes('sing us another one');
-            });
-
-            if (isChorus && !chorusTemplate) {
-              chorusTemplate = currentVerse.map(l => ({...l}));
-            }
-
-            verses.push({
-              lines: currentVerse.map(l => ({...l})),
-              isChorus: isChorus
-            });
-            currentVerse = [];
-          }
-
-          // Insert chorus if we have it
-          if (chorusTemplate) {
-            verses.push({
-              lines: chorusTemplate.map(l => ({...l})),
-              isChorus: true
-            });
-          }
-          continue;
-        }
-
-        currentVerse.push(line);
-      }
-
-      // Don't forget the last verse
-      if (currentVerse.length > 0) {
-        const isChorus = currentVerse.some(l => {
-          const lt = l.text.toLowerCase();
-          return lt.includes('that was a terrible song') || lt.includes('sing us another one');
-        });
-
-        verses.push({
-          lines: currentVerse.map(l => ({...l})),
-          isChorus: isChorus
-        });
-      }
-
-      return verses;
+      return txt.split('\n')
+        .map(l => {
+          const m = l.match(/\[(\d{2}):(\d{2})\.(\d{1,2})\](.*)/);
+          if (!m) return null;
+          const t = +m[1] * 60 + +m[2] + +m[3] / Math.pow(10, m[3].length);
+          return { time: t, text: m[4].trim() };
+        }).filter(Boolean).sort((a, b) => a.time - b.time);
     }
-
-    const verses = parseLrc(lrcText || '');
-    console.log('Parsed verses:', verses.length);
-    verses.forEach((v, i) => console.log(`Verse ${i+1} (${v.isChorus ? 'chorus' : 'verse'}): ${v.lines.length} lines`));
-
+    const lrcData = parseLrc(lrcText || '');
     if (!audioSrc) { status.textContent = 'Missing audio'; throw 0; }
 
-    let currentVerseIndex = -1;
-
-    function renderVerse(verseIndex) {
-      if (verseIndex === currentVerseIndex) return;
-      currentVerseIndex = verseIndex;
-      verseDisplay.innerHTML = '';
-      if (verseIndex < 0 || verseIndex >= verses.length) return;
-
-      const verse = verses[verseIndex];
-      verse.lines.forEach((line, i) => {
-        const div = document.createElement('div');
-        div.className = 'line';
-        div.textContent = line.text;
-        div.dataset.idx = i;
-        div.dataset.time = line.time;
-        div.addEventListener('click', () => {
-          audio.currentTime = line.time;
-          audio.play();
-          playBtn.textContent = '⏸ Pause';
-        });
-        verseDisplay.appendChild(div);
+    /* ---------- BUILD LYRICS DOM ---------- */
+    lrcData.forEach((line, i) => {
+      const div = document.createElement('div');
+      div.className = 'line';
+      div.textContent = line.text;
+      div.dataset.idx = i;
+      div.dataset.time = line.time;
+      div.addEventListener('click', () => {
+        audio.currentTime = line.time;
+        audio.play();
+        playBtn.textContent = '⏸ Pause';
       });
-    }
+      linesDiv.appendChild(div);
+    });
 
+    /* ---------- HIGHLIGHT CURRENT LINE ---------- */
     audio.addEventListener('timeupdate', () => {
-      const t = audio.currentTime;
-      let verseIdx = -1;
-
-      // Find which verse contains the current time
-      for (let i = verses.length - 1; i >= 0; i--) {
-        if (verses[i].lines.length > 0 && verses[i].lines[0].time <= t) {
-          verseIdx = i;
-          break;
-        }
-      }
-
-      if (verseIdx >= 0) {
-        renderVerse(verseIdx);
-        const verse = verses[verseIdx];
-
-        // Find active line within current verse
-        let lineIdx = verse.lines.findIndex(l => l.time > t) - 1;
-        if (lineIdx < 0) lineIdx = verse.lines.length - 1;
-
-        verseDisplay.querySelectorAll('.line').forEach(el => el.classList.remove('active'));
-        const el = verseDisplay.querySelector(`.line[data-idx="${lineIdx}"]`);
-        if (el) {
-          el.classList.add('active');
-          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
+      let t = audio.currentTime, idx = lrcData.findIndex(l => l.time > t) - 1;
+      if (idx < 0) idx = 0;
+      document.querySelectorAll('.line').forEach(el => el.classList.remove('active'));
+      const el = document.querySelector(`.line[data-idx="${idx}"]`);
+      if (el) {
+        el.classList.add('active');
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
     });
 
+    /* ---------- PLAY / PAUSE ---------- */
     playBtn.onclick = () => {
       if (audio.paused) { audio.play(); playBtn.textContent = '⏸ Pause'; }
       else { audio.pause(); playBtn.textContent = '▶ Play'; }
     };
 
+    /* ---------- FIREBASE ---------- */
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getFirestore, collection, onSnapshot, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
     const firebaseConfig = {
@@ -318,6 +424,7 @@
     const db = getFirestore(app);
     const q = query(collection(db, 'songs'), orderBy('title'));
 
+    /* ---------- FAVOURITES ---------- */
     const FAV_KEY = 'h3_fav_songs';
     const FAV_FILTER_KEY = 'h3_fav_filter';
     let favs = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
@@ -332,6 +439,7 @@
     favBtn.onclick = () => toggleFav(thisId);
     favBtn.classList.toggle('active', isFav(thisId));
 
+    /* ---------- REPEAT ---------- */
     const REPEAT_KEY = 'h3_repeat';
     let repeatMode = localStorage.getItem(REPEAT_KEY) || 'off';
     function setRepeatIcon() {
@@ -346,6 +454,7 @@
     repeatBtn.onclick = nextRepeat;
     setRepeatIcon();
 
+    /* ---------- PLAYLIST ---------- */
     let allSongs = [];
     let playList = [];
     let playIndex = -1;
@@ -369,6 +478,7 @@
     }
     favFilterBtn.onclick = toggleFavFilter;
 
+    /* ---------- PREV / NEXT ---------- */
     function jump(delta) {
       if (playList.length === 0) { console.warn('Playlist empty'); return; }
       let attempts = 0;
@@ -391,12 +501,14 @@
     prevBtn.onclick = () => jump(-1);
     nextBtn.onclick = () => jump(1);
 
+    /* ---------- END OF TRACK ---------- */
     audio.addEventListener('ended', () => {
       if (repeatMode === 'one') { audio.currentTime = 0; audio.play(); return; }
       if (repeatMode === 'all') { jump(1); return; }
       playBtn.textContent = '▶ Play';
     });
 
+    /* ---------- LOAD & GO ---------- */
     status.textContent = title;
     audio.src = audioSrc;
     audio.load();

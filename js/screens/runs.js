@@ -432,7 +432,6 @@ function startListeningToRuns() {
   window.locationRefreshInterval = setInterval(refreshLocationInBackground, 300000);
 }
 
-// KOTLIN MATCH: recycleById function
 async function recycleById(runId, runData) {
   try {
     const runDay = runData.runDay || 'Thursday';
@@ -441,9 +440,11 @@ async function recycleById(runId, runData) {
     const oldNumber = runData.runNumber || 0;
     
     const nextDate = calculateNextOccurrence(runDay, cadence, runDate);
+    const newRunNumber = oldNumber + 1;
     
+    // 1. Update the run template
     const updates = {
-      runNumber: oldNumber + 1,
+      runNumber: newRunNumber,
       date: nextDate,
       address: 'TBA',
       lat: 0,
@@ -452,12 +453,55 @@ async function recycleById(runId, runData) {
     };
     
     await updateDoc(doc(window.db, 'runs', runId), updates);
-    console.log(`Recycled run ${runId}: new date ${nextDate}, new number ${updates.runNumber}`);
+    console.log(`Recycled run ${runId}: new date ${nextDate}, new number ${newRunNumber}`);
+    
+    // 2. Create runsHistory entry for the new run so users can join immediately
+    const historyRef = doc(collection(window.db, 'runsHistory'));
+    const historyData = {
+      templateId: runId,
+      kennel: runData.kennel || '',
+      state: runData.state || '',
+      title: runData.title || '',
+      runNumber: newRunNumber,
+      date: nextDate,
+      time: runData.time || '',
+      address: 'TBA',
+      lat: 0,
+      lng: 0,
+      regoFee: runData.regoFee || 0,
+      trailType: runData.trailType || '',
+      hare: '',
+      imageUrl: runData.imageUrl || '',
+      createdAt: Timestamp.now(),
+      accNo: runData.accNo || '',
+      accName: runData.accName || '',
+      bank: runData.bank || '',
+      country: runData.country || 'Nigeria',
+      // Initialize payment structure so joins work immediately
+      payments: {
+        rego: {
+          totalAmount: 0,
+          forHashers: [],
+          paidBy: '',
+          paymentRequestId: ''
+        },
+        sponsorship: {
+          totalAmount: 0,
+          sponsors: [],
+          paidBy: '',
+          paymentRequestId: ''
+        }
+      }
+    };
+    
+    await setDoc(historyRef, historyData);
+    console.log(`Created runsHistory entry: ${historyRef.id} for date ${nextDate}`);
     
   } catch (error) {
     console.error(`Error recycling run ${runId}:`, error);
   }
 }
+
 
 // KOTLIN MATCH: nextOccurrence function
 function calculateNextOccurrence(dayName, cadence, fromDate) {

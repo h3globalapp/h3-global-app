@@ -5,24 +5,24 @@
   <title>Hash Songs – Sync Player</title>
   <!-- CRITICAL: Added viewport-fit=cover for iOS standalone mode -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  
+
   <!-- PWA Manifest -->
   <link rel="manifest" href="./manifest.json">
-  
+
   <!-- Android -->
   <meta name="mobile-web-app-capable" content="yes">
-  
+
   <!-- iOS PWA Support -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="H3 Global App">
   <link rel="apple-touch-icon" href="/icon-192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png">
-  
+
   <!-- Theme Color -->
   <meta name="theme-color" content="#FF6D00">
   <meta name="background-color" content="#FFFFFF">
-  
+
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>">
 
@@ -53,12 +53,12 @@
       --sab: env(safe-area-inset-bottom);
       --sal: env(safe-area-inset-left);
     }
-    
+
     * {
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     }
-    
+
     body {
       margin: 0;
       padding: 0;
@@ -75,7 +75,7 @@
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
     }
-    
+
     /* ===== HEADER ===== */
     .masthead {
       background: var(--clr-primary);
@@ -90,7 +90,7 @@
       /* Account for safe area */
       padding-top: max(12px, env(safe-area-inset-top));
     }
-    
+
     .masthead__back {
       background: none;
       border: none;
@@ -104,14 +104,14 @@
       align-items: center;
       justify-content: center;
     }
-    
+
     .masthead__title {
       font-size: 1.1em;
       font-weight: 600;
       margin: 0;
       flex: 1;
     }
-    
+
     /* ===== FIXED CONTROLS CONTAINER ===== */
     .controls-container {
       background: var(--bg);
@@ -123,7 +123,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       z-index: 10;
     }
-    
+
     /* ===== CARDS ===== */
     .card {
       background: var(--card);
@@ -131,7 +131,7 @@
       padding: 16px;
       box-shadow: var(--shadow);
     }
-    
+
     .card-title {
       font-size: 12px;
       font-weight: 600;
@@ -140,7 +140,7 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    
+
     /* ===== AUDIO PLAYER ===== */
     audio {
       width: 100%;
@@ -149,13 +149,13 @@
       margin-bottom: 12px;
       height: 40px;
     }
-    
+
     /* ===== BUTTONS ===== */
     .btn-row {
       display: flex;
       gap: 8px;
     }
-    
+
     .btn {
       flex: 1;
       border: none;
@@ -170,56 +170,56 @@
       justify-content: center;
       gap: 4px;
     }
-    
+
     .btn-primary {
       background: var(--clr-primary);
       color: white;
     }
-    
+
     .btn-primary:hover {
       background: #e65100;
     }
-    
+
     .btn-primary:disabled {
       background: #ddd;
       color: #888;
       cursor: not-allowed;
     }
-    
+
     .btn-secondary {
       background: white;
       color: var(--clr-primary);
       border: 2px solid var(--clr-primary);
     }
-    
+
     .btn-secondary:hover {
       background: #fff3e0;
     }
-    
+
     .btn-secondary.active {
       background: var(--clr-primary);
       color: white;
     }
-    
+
     .btn-icon {
       flex: 0 0 44px;
       padding: 0;
       font-size: 18px;
     }
-    
+
     /* ===== UTILITY ROW ===== */
     .utility-row {
       display: flex;
       gap: 8px;
       justify-content: center;
     }
-    
+
     .utility-row .btn {
       flex: 1;
       font-size: 12px;
       padding: 10px;
     }
-    
+
     /* ===== STATUS ===== */
     #status {
       text-align: center;
@@ -227,7 +227,7 @@
       color: var(--text-secondary);
       margin: 4px 0 0 0;
     }
-    
+
     /* ===== SCROLLABLE LYRICS AREA ===== */
     .lyrics-container {
       flex: 1;
@@ -238,7 +238,7 @@
       /* Safe area at bottom */
       padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
-    
+
     .lyrics-card {
       background: var(--card);
       border-radius: 12px;
@@ -248,13 +248,13 @@
       flex-direction: column;
       overflow: hidden;
     }
-    
+
     .lyrics-header {
       padding: 12px 16px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
-    
+
     .lyrics-title {
       font-size: 12px;
       font-weight: 600;
@@ -263,13 +263,16 @@
       letter-spacing: 0.5px;
       margin: 0;
     }
-    
-    #lines {
+
+    #verse-display {
       flex: 1;
       overflow-y: auto;
       padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    
+
     .line {
       padding: 12px 16px;
       border-radius: 8px;
@@ -279,11 +282,11 @@
       line-height: 1.5;
       cursor: pointer;
     }
-    
+
     .line:hover {
       background: #f5f5f5;
     }
-    
+
     .line.active {
       background: var(--clr-primary);
       color: white;
@@ -306,18 +309,18 @@
     <div class="card" style="padding: 12px 16px;">
       <div class="card-title" style="margin-bottom: 8px;">Now Playing</div>
       <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
-      
+
       <!-- Main Controls -->
       <div class="btn-row">
         <button class="btn btn-primary" id="prev">⏮ Prev</button>
         <button class="btn btn-primary" id="play">▶ Play</button>
         <button class="btn btn-primary" id="next">Next ⏭</button>
       </div>
-      
+
       <!-- Status -->
       <div id="status">Loading...</div>
     </div>
-    
+
     <!-- Utility Controls -->
     <div class="utility-row">
       <button class="btn btn-secondary" id="repeat">🔁 Off</button>
@@ -332,7 +335,7 @@
       <div class="lyrics-header">
         <h2 class="lyrics-title">Lyrics</h2>
       </div>
-      <div id="lines"></div>
+      <div id="verse-display"></div>
     </div>
   </div>
 
@@ -354,7 +357,7 @@
     const favBtn = document.getElementById('favBtn');
     const favFilterBtn = document.getElementById('favFilterBtn');
     const status = document.getElementById('status');
-    const linesDiv = document.getElementById('lines');
+    const verseDisplay = document.getElementById('verse-display');
     const backBtn = document.getElementById('backBtn');
 
     /* ---------- BACK BUTTON ---------- */
@@ -365,41 +368,119 @@
 
     /* ---------- LRC PARSER ---------- */
     function parseLrc(txt) {
-      return txt.split('\n')
-        .map(l => {
-          const m = l.match(/\[(\d{2}):(\d{2})\.(\d{1,2})\](.*)/);
-          if (!m) return null;
-          const t = +m[1] * 60 + +m[2] + +m[3] / Math.pow(10, m[3].length);
-          return { time: t, text: m[4].trim() };
-        }).filter(Boolean).sort((a, b) => a.time - b.time);
+      const lines = txt.split('\n');
+      const verses = [];
+      let currentVerse = [];
+      let chorusLines = null;
+      let isChorus = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // Check for chorus marker
+        if (line.toLowerCase().includes('repeat chorus') || line.toLowerCase().includes('chorus')) {
+          if (currentVerse.length > 0) {
+            verses.push({ lines: currentVerse, isChorus: false });
+            currentVerse = [];
+          }
+          // If we have stored chorus lines, add them
+          if (chorusLines && chorusLines.length > 0) {
+            verses.push({ lines: [...chorusLines], isChorus: true });
+          }
+          continue;
+        }
+
+        const m = line.match(/\[(\d{2}):(\d{2})\.(\d{1,2})\](.*)/);
+        if (!m) continue;
+        const t = +m[1] * 60 + +m[2] + +m[3] / Math.pow(10, m[3].length);
+        const text = m[4].trim();
+
+        if (text.toLowerCase().includes('sing us another one') || 
+            text.toLowerCase().includes('that was a terrible song')) {
+          isChorus = true;
+        }
+
+        currentVerse.push({ time: t, text: text });
+
+        // Detect end of stanza by next blank line or next timestamp gap > 3s
+        const nextLine = lines[i + 1];
+        if (!nextLine || nextLine.trim() === '') {
+          if (currentVerse.length > 0) {
+            if (isChorus && !chorusLines) {
+              chorusLines = [...currentVerse];
+            }
+            verses.push({ lines: currentVerse, isChorus: isChorus });
+            currentVerse = [];
+            isChorus = false;
+          }
+        }
+      }
+
+      if (currentVerse.length > 0) {
+        verses.push({ lines: currentVerse, isChorus: isChorus });
+      }
+
+      return verses;
     }
-    const lrcData = parseLrc(lrcText || '');
+
+    const verses = parseLrc(lrcText || '');
     if (!audioSrc) { status.textContent = 'Missing audio'; throw 0; }
 
-    /* ---------- BUILD LYRICS DOM ---------- */
-    lrcData.forEach((line, i) => {
-      const div = document.createElement('div');
-      div.className = 'line';
-      div.textContent = line.text;
-      div.dataset.idx = i;
-      div.dataset.time = line.time;
-      div.addEventListener('click', () => {
-        audio.currentTime = line.time;
-        audio.play();
-        playBtn.textContent = '⏸ Pause';
+    /* ---------- RENDER CURRENT VERSE ---------- */
+    let currentVerseIndex = -1;
+
+    function renderVerse(verseIndex) {
+      if (verseIndex === currentVerseIndex) return;
+      currentVerseIndex = verseIndex;
+
+      verseDisplay.innerHTML = '';
+
+      if (verseIndex < 0 || verseIndex >= verses.length) return;
+
+      const verse = verses[verseIndex];
+      verse.lines.forEach((line, i) => {
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.textContent = line.text;
+        div.dataset.idx = i;
+        div.dataset.time = line.time;
+        div.addEventListener('click', () => {
+          audio.currentTime = line.time;
+          audio.play();
+          playBtn.textContent = '⏸ Pause';
+        });
+        verseDisplay.appendChild(div);
       });
-      linesDiv.appendChild(div);
-    });
+    }
 
     /* ---------- HIGHLIGHT CURRENT LINE ---------- */
     audio.addEventListener('timeupdate', () => {
-      let t = audio.currentTime, idx = lrcData.findIndex(l => l.time > t) - 1;
-      if (idx < 0) idx = 0;
-      document.querySelectorAll('.line').forEach(el => el.classList.remove('active'));
-      const el = document.querySelector(`.line[data-idx="${idx}"]`);
-      if (el) {
-        el.classList.add('active');
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const t = audio.currentTime;
+
+      // Find which verse should be visible
+      let verseIdx = -1;
+      for (let i = verses.length - 1; i >= 0; i--) {
+        if (verses[i].lines.length > 0 && verses[i].lines[0].time <= t) {
+          verseIdx = i;
+          break;
+        }
+      }
+
+      if (verseIdx >= 0) {
+        renderVerse(verseIdx);
+
+        // Find active line within current verse
+        const verse = verses[verseIdx];
+        let lineIdx = verse.lines.findIndex(l => l.time > t) - 1;
+        if (lineIdx < 0) lineIdx = 0;
+
+        verseDisplay.querySelectorAll('.line').forEach(el => el.classList.remove('active'));
+        const el = verseDisplay.querySelector(`.line[data-idx="${lineIdx}"]`);
+        if (el) {
+          el.classList.add('active');
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
       }
     });
 
